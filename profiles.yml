@@ -1,0 +1,13 @@
+# Local profile. Run dbt with:  dbt build --profiles-dir .
+# For the hosted demo, set MOTHERDUCK_TOKEN and use `--target prod`.
+palm_analytics:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: palm.duckdb
+      threads: 4
+    prod:
+      type: duckdb
+      path: "md:palm_analytics?motherduck_token={{ env_var('MOTHERDUCK_TOKEN', '') }}"
+      threads: 4

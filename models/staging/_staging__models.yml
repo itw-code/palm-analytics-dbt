@@ -1,0 +1,27 @@
+version: 2
+
+models:
+  - name: stg_weather
+    description: Typed, renamed daily weather per region.
+    columns:
+      - name: region
+        tests: [not_null]
+      - name: weather_date
+        tests: [not_null]
+      - name: temp_mean_c
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 10
+              max_value: 45
+  - name: stg_cpo_price
+    description: Typed daily CPO price.
+    columns:
+      - name: price_date
+        tests: [not_null, unique]
+      - name: cpo_usd_per_tonne
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 100
+              max_value: 3000

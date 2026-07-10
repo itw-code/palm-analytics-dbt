@@ -1,0 +1,19 @@
+# DuckDB local warehouse
+*.duckdb
+*.duckdb.wal
+
+# dbt
+target/
+dbt_packages/
+logs/
+.user.yml
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# secrets / env
+.env
+*.token
+profiles.local.yml

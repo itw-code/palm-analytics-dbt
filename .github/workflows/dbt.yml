@@ -1,0 +1,28 @@
+name: dbt build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install dbt packages
+        run: dbt deps
+
+      - name: Ingest raw data
+        run: python ingestion/load_raw.py
+
+      - name: dbt build (run + test every model)
+        run: dbt build --profiles-dir .

@@ -1,0 +1,19 @@
+version: 2
+
+sources:
+  - name: raw
+    description: Raw tables loaded by ingestion/load_raw.py into DuckDB.
+    schema: main
+    tables:
+      - name: raw_weather
+        description: Daily weather observations per estate region (Open-Meteo).
+        columns:
+          - name: region
+            tests: [not_null]
+          - name: obs_date
+            tests: [not_null]
+      - name: raw_cpo_price
+        description: Crude palm oil price, USD per tonne (World Bank).
+        columns:
+          - name: price_date
+            tests: [not_null, unique]
