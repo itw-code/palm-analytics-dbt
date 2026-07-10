@@ -36,6 +36,16 @@ dbt build --profiles-dir .
 dbt docs generate --profiles-dir . && dbt docs serve --profiles-dir .
 ```
 
+### Dashboard (Evidence.dev)
+```bash
+cp palm.duckdb dashboard/sources/palm/palm.duckdb   # feed the built warehouse to the BI layer
+cd dashboard
+npm install
+npm run sources     # build the source cache from DuckDB
+npm run dev         # local dashboard at http://localhost:3000
+# npm run build     # static site -> dashboard/build/
+```
+
 ## Stack
 | Layer | Tool |
 |---|---|
@@ -44,7 +54,7 @@ dbt docs generate --profiles-dir . && dbt docs serve --profiles-dir .
 | Transformation | **dbt** (`dbt-duckdb`) |
 | Orchestration | Airflow + astronomer-cosmos *(next milestone)* |
 | CI | GitHub Actions (`dbt build`) |
-| BI | Metabase / Evidence.dev *(next milestone)* |
+| BI | **Evidence.dev** (BI-as-code, in `dashboard/`) |
 
 ## Data model
 See [models/](models/). The marts answer: *given the weather and CPO price on a given day in a given region, which estate operations (fertilize / harvest / spray) are favorable, and what is the estimated value at risk?*

@@ -1,0 +1,4 @@
+name: palm
+type: duckdb
+options:
+  filename: palm.duckdb
