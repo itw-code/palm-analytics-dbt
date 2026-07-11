@@ -4,8 +4,17 @@ select
     temp_mean_c,
     precip_mm,
     wind_max_kmh,
+    humidity_pct,
+    soil_moisture,
+    water_deficit_mm,
     is_fertilize_favorable,
     is_harvest_favorable,
     is_spray_favorable,
-    cpo_usd_per_tonne
+    is_effective_harvest_day,
+    is_holiday,
+    is_weekend,
+    cpo_usd_per_tonne,
+    usd_idr,
+    cpo_idr_per_tonne,
+    harvest_day_value_idr
 from fct_estate_operations_daily

@@ -24,5 +24,12 @@ jobs:
       - name: Ingest raw data
         run: python ingestion/load_raw.py
 
-      - name: dbt build (run + test every model)
+      - name: dbt build (run + test every model, incl. seeds & snapshot)
         run: dbt build --profiles-dir .
+
+      - name: dbt source freshness (advisory)
+        run: dbt source freshness --profiles-dir .
+        continue-on-error: true
+
+      - name: dbt docs generate (lineage)
+        run: dbt docs generate --profiles-dir .

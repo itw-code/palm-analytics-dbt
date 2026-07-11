@@ -1,64 +1,75 @@
 # 🌴 palm-analytics-dbt
 
-An end-to-end **analytics engineering** portfolio project on a real-world domain: Indonesian palm-oil estate operations. It demonstrates the modern AE stack from raw ingestion to a tested, documented dimensional model, orchestrated and CI-checked.
+[![dbt build](https://github.com/itw-code/palm-analytics-dbt/actions/workflows/dbt.yml/badge.svg)](https://github.com/itw-code/palm-analytics-dbt/actions/workflows/dbt.yml)
+[![deploy dashboard](https://github.com/itw-code/palm-analytics-dbt/actions/workflows/pages.yml/badge.svg)](https://github.com/itw-code/palm-analytics-dbt/actions/workflows/pages.yml)
+
+An end-to-end **analytics engineering** project on a real domain: Indonesian palm-oil estate operations. It ingests four free public data sources, models them with dbt into a tested, documented, contract-enforced star schema, and serves the result as an interactive Evidence.dev dashboard - all reproducibly, with CI.
+
+**🔗 Live dashboard:** https://itw-code.github.io/palm-analytics-dbt/
 
 ```
-Open-Meteo (weather) + World Bank (CPO price)
-        │   ingestion/load_raw.py  (Python)
-        ▼
-   DuckDB  (palm.duckdb  ·  MotherDuck for the hosted demo)
-        │   dbt build
-        ▼
-   dbt models:  sources → staging → intermediate → marts
-        │        (+ tests, docs, exposures)
-        ▼
-   BI layer (Metabase / Evidence.dev)  ·  GitHub Actions runs dbt build + test on every PR
+Open-Meteo   Frankfurter   Nager.Date   World Bank
+ (weather)   (USD→IDR)     (holidays)   (palm/soy price)
+     └─────────────┴────── ingestion/load_raw.py ──────┴─────────────┐
+                                                                      ▼
+                                              DuckDB  (palm.duckdb · MotherDuck)
+                                                                      │  dbt build
+                                                                      ▼
+                        sources → staging (stg_) → intermediate (int_) → marts (dim_/fct_)
+                              + seeds · snapshot (SCD2) · contract · tests · exposures
+                                                                      ▼
+                             Evidence.dev dashboard        GitHub Actions CI
+                        (Overview · Planner · Market)     (dbt build on every push)
 ```
 
-## Why this project
-Analytics engineering is **modeling**, not tool-collecting. The centerpiece here is the layered dbt model:
-- **staging** (`stg_`) — 1:1 cleaned, renamed, typed views over raw sources
-- **intermediate** (`int_`) — reusable business logic (agronomy suitability signals)
-- **marts** (`fct_` / `dim_`) — a Kimball-style star the BI layer consumes
+## The question it answers
+*Given today's weather and the palm-oil price (in local currency), which estate operations - fertilize, harvest, spray - are favorable in each region, and what is a good harvest day worth?* An **effective harvest day** also requires available labour (not a weekend or Indonesian public holiday).
+
+## Data sources (all free, all keyless)
+| Source | Provides |
+|---|---|
+| [Open-Meteo](https://open-meteo.com) | daily weather per region: temp, precip, wind, soil moisture, ET0, humidity |
+| [Frankfurter](https://frankfurter.dev) (ECB) | USD→IDR daily reference rate |
+| [Nager.Date](https://date.nager.at) | Indonesia public-holiday calendar |
+| [World Bank Pink Sheet](https://www.worldbank.org/en/research/commodity-markets) | monthly palm-oil & soybean-oil prices |
+
+Ingestion attempts a live fetch and falls back to deterministic synthetic data, so builds and CI are always reproducible offline.
+
+## What this demonstrates
+| Feature | Competency |
+|---|---|
+| 4 heterogeneous sources + `dbt source freshness` | ingestion & source management |
+| `seeds/region_profile.csv` | reference-data seeds |
+| staging → intermediate → marts layering | modular modeling |
+| `dim_date` (weekend + holiday flags), `dim_region`, `fct_*` | Kimball dimensional modeling |
+| forward-filled FX & prices via DuckDB **ASOF joins** | SQL depth |
+| **incremental** `fct_estate_operations_daily` | scalable materialization |
+| **SCD2 snapshot** on commodity price | change data capture |
+| **model contract** on `fct_commodity_price_daily` | data governance |
+| custom generic test `non_negative` + not_null/unique/relationships/accepted_range | data quality |
+| **exposures** + `dbt docs` lineage | documentation |
+| GitHub Actions: `dbt build` + Pages deploy | CI/CD |
+
+Verified: `dbt build` → **PASS=56, 0 errors**; Evidence build renders 4 pages with no query errors.
 
 ## Quickstart
 ```bash
-python -m venv .venv && . .venv/Scripts/activate   # (Windows: .venv\Scripts\activate)
+python -m venv .venv && . .venv/Scripts/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-# 1. Ingest raw data into DuckDB (live APIs, with deterministic synthetic fallback)
-python ingestion/load_raw.py
-
-# 2. Build + test the whole model
-dbt build --profiles-dir .
-
-# 3. Explore docs / lineage
-dbt docs generate --profiles-dir . && dbt docs serve --profiles-dir .
+python ingestion/load_raw.py          # ingest raw data into DuckDB
+dbt deps && dbt build --profiles-dir . # build + test everything (seeds, snapshot, models)
+dbt docs generate --profiles-dir . && dbt docs serve --profiles-dir .  # lineage
 ```
 
 ### Dashboard (Evidence.dev)
 ```bash
-cp palm.duckdb dashboard/sources/palm/palm.duckdb   # feed the built warehouse to the BI layer
+cp palm.duckdb dashboard/sources/palm/palm.duckdb
 cd dashboard
 npm install
-npm run sources     # build the source cache from DuckDB
-npm run dev         # local dashboard at http://localhost:3000
-# npm run build     # static site -> dashboard/build/
+npm run sources
+npm run dev        # http://localhost:3000
 ```
 
 ## Stack
-| Layer | Tool |
-|---|---|
-| Ingestion | Python (`requests`) |
-| Warehouse | DuckDB (local) → MotherDuck (hosted demo) |
-| Transformation | **dbt** (`dbt-duckdb`) |
-| Orchestration | Airflow + astronomer-cosmos *(next milestone)* |
-| CI | GitHub Actions (`dbt build`) |
-| BI | **Evidence.dev** (BI-as-code, in `dashboard/`) |
-
-## Data model
-See [models/](models/). The marts answer: *given the weather and CPO price on a given day in a given region, which estate operations (fertilize / harvest / spray) are favorable, and what is the estimated value at risk?*
-
-## Notes
-- Ingestion attempts live Open-Meteo + World Bank calls and falls back to **deterministic synthetic data** if offline, so `dbt build` and CI are always green. Swap in live-only mode via `--live-only`.
-- `palm.duckdb` and secrets are git-ignored. To use MotherDuck, set `MOTHERDUCK_TOKEN` and point the `prod` target at `md:palm_analytics`.
+Python · DuckDB / MotherDuck · **dbt** (`dbt-duckdb`) · Evidence.dev · GitHub Actions

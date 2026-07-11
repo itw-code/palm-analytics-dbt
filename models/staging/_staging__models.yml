@@ -2,7 +2,7 @@ version: 2
 
 models:
   - name: stg_weather
-    description: Typed, renamed daily weather per region.
+    description: Typed, renamed daily weather per region (incl. soil moisture, ET0, humidity).
     columns:
       - name: region
         tests: [not_null]
@@ -11,17 +11,34 @@ models:
       - name: temp_mean_c
         tests:
           - not_null
-          - dbt_utils.accepted_range:
-              min_value: 10
-              max_value: 45
-  - name: stg_cpo_price
-    description: Typed daily CPO price.
+          - dbt_utils.accepted_range: {min_value: 10, max_value: 45}
+      - name: humidity_pct
+        tests:
+          - dbt_utils.accepted_range: {min_value: 0, max_value: 100}
+
+  - name: stg_fx_rate
+    description: Typed USD->IDR business-day rate.
     columns:
-      - name: price_date
+      - name: rate_date
         tests: [not_null, unique]
-      - name: cpo_usd_per_tonne
+      - name: usd_idr
         tests:
           - not_null
-          - dbt_utils.accepted_range:
-              min_value: 100
-              max_value: 3000
+          - non_negative
+
+  - name: stg_holidays
+    description: One row per Indonesian public-holiday date.
+    columns:
+      - name: holiday_date
+        tests: [not_null, unique]
+
+  - name: stg_commodity_price
+    description: Monthly palm-oil & soybean-oil prices.
+    columns:
+      - name: usd_per_tonne
+        tests:
+          - not_null
+          - non_negative
+      - name: commodity
+        tests:
+          - accepted_values: {values: ['palm_oil', 'soybean_oil']}

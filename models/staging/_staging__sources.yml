@@ -2,18 +2,47 @@ version: 2
 
 sources:
   - name: raw
-    description: Raw tables loaded by ingestion/load_raw.py into DuckDB.
+    description: Raw tables loaded by ingestion/load_raw.py into DuckDB from four free APIs.
     schema: main
     tables:
       - name: raw_weather
-        description: Daily weather observations per estate region (Open-Meteo).
+        description: Daily weather per estate region (Open-Meteo Archive).
+        loaded_at_field: "cast(obs_date as timestamp)"
+        freshness:
+          warn_after: {count: 45, period: day}
         columns:
           - name: region
             tests: [not_null]
           - name: obs_date
             tests: [not_null]
-      - name: raw_cpo_price
-        description: Crude palm oil price, USD per tonne (World Bank).
+
+      - name: raw_fx_rate
+        description: USD->IDR daily reference rate (Frankfurter / ECB, business days).
+        loaded_at_field: "cast(rate_date as timestamp)"
+        freshness:
+          warn_after: {count: 45, period: day}
         columns:
-          - name: price_date
+          - name: rate_date
             tests: [not_null, unique]
+          - name: usd_idr
+            tests: [not_null]
+
+      - name: raw_holidays
+        description: Indonesia public holidays (Nager.Date).
+        columns:
+          - name: holiday_date
+            tests: [not_null]
+
+      - name: raw_commodity_price
+        description: Monthly palm-oil & soybean-oil prices, USD/tonne (World Bank Pink Sheet).
+        loaded_at_field: "cast(price_month as timestamp)"
+        freshness:
+          warn_after: {count: 90, period: day}
+        columns:
+          - name: price_month
+            tests: [not_null]
+          - name: commodity
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['palm_oil', 'soybean_oil']

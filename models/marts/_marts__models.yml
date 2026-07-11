@@ -1,45 +1,79 @@
 version: 2
 
 models:
+  - name: dim_date
+    description: Calendar dimension with weekend and Indonesian public-holiday flags.
+    columns:
+      - name: date_key
+        tests: [not_null, unique]
+      - name: is_holiday
+        tests: [not_null]
+
   - name: dim_region
-    description: Conformed region dimension for palm-oil estates.
+    description: Conformed region dimension enriched with seeded estate profile.
     columns:
       - name: region_key
         tests: [not_null, unique]
       - name: island
         tests:
-          - accepted_values:
-              values: ['Sumatra', 'Kalimantan']
+          - accepted_values: {values: ['Sumatra', 'Kalimantan']}
+      - name: planted_hectares
+        tests: [non_negative]
 
   - name: fct_estate_operations_daily
     description: >
-      Daily fact per region: agronomy suitability signals joined to CPO price.
-      Grain = one row per (region_key, operation_date).
+      Incremental daily fact per region: agronomy signals joined to palm price, FX and
+      the holiday calendar. Grain = one row per (region_key, operation_date).
     columns:
       - name: operations_key
         tests: [not_null, unique]
       - name: region_key
         tests:
           - not_null
-          - relationships:
-              to: ref('dim_region')
-              field: region_key
+          - relationships: {to: ref('dim_region'), field: region_key}
       - name: operation_date
-        tests: [not_null]
+        tests:
+          - not_null
+          - relationships: {to: ref('dim_date'), field: date_key}
       - name: cpo_usd_per_tonne
         tests:
-          - dbt_utils.accepted_range:
-              min_value: 100
-              max_value: 3000
+          - dbt_utils.accepted_range: {min_value: 100, max_value: 3000}
+      - name: harvest_day_value_idr
+        tests: [non_negative]
+
+  - name: fct_commodity_price_daily
+    description: Daily palm & soybean oil prices, substitution spread, FX, and palm price in IDR.
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: price_date
+        data_type: date
+        tests: [not_null, unique]
+      - name: palm_oil_usd
+        data_type: double
+        tests: [non_negative]
+      - name: soybean_oil_usd
+        data_type: double
+        tests: [non_negative]
+      - name: palm_soy_spread_usd
+        data_type: double
+      - name: usd_idr
+        data_type: double
+      - name: palm_oil_idr
+        data_type: double
 
 exposures:
   - name: estate_operations_dashboard
     type: dashboard
-    maturity: low
+    maturity: medium
+    url: https://itw-code.github.io/palm-analytics-dbt/
     owner:
       name: Ihsan Wanda
       email: ihsantriwanda@gmail.com
-    description: BI dashboard recommending daily fertilize/harvest/spray actions by region.
+    description: Evidence.dev dashboard - daily operations planner and commodity market view.
     depends_on:
       - ref('fct_estate_operations_daily')
+      - ref('fct_commodity_price_daily')
       - ref('dim_region')
+      - ref('dim_date')

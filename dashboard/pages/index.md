@@ -2,37 +2,40 @@
 title: Palm Estate Operations
 ---
 
-Daily operational guidance for Indonesian palm-oil estates - which activities are favorable by region, alongside the crude palm oil (CPO) price that sets the value of a good harvest day. Data flows Open-Meteo + World Bank → DuckDB → dbt → this dashboard.
+Decision-support for Indonesian palm-oil estates: what operations are favorable by region, and what a good harvest day is worth in both USD and local currency. Data flows **Open-Meteo + Frankfurter + Nager.Date + World Bank → DuckDB → dbt → this dashboard**.
 
-```sql latest_price
-select operation_date, max(cpo_usd_per_tonne) as cpo_usd_per_tonne
+```sql headline
+select
+    max(operation_date) as as_of,
+    max(cpo_usd_per_tonne) as cpo_usd,
+    max(cpo_idr_per_tonne) as cpo_idr
 from palm.operations_daily
-group by operation_date
-order by operation_date desc
-limit 1
+where operation_date = (select max(operation_date) from palm.operations_daily)
 ```
 
 ```sql favorable_counts
 select
-    count(*) filter (where is_harvest_favorable) as harvest_days,
+    count(*) filter (where is_effective_harvest_day) as effective_harvest_days,
     count(*) filter (where is_fertilize_favorable) as fertilize_days,
     count(*) filter (where is_spray_favorable) as spray_days
 from palm.operations_daily
 ```
 
-<BigValue data={latest_price} value=cpo_usd_per_tonne fmt="usd0" title="Latest CPO price (USD/tonne)"/>
-<BigValue data={favorable_counts} value=harvest_days title="Harvest-favorable region-days"/>
-<BigValue data={favorable_counts} value=spray_days title="Spray-favorable region-days"/>
+<BigValue data={headline} value=cpo_usd fmt="usd0" title="Palm price (USD/tonne)"/>
+<BigValue data={headline} value=cpo_idr fmt="#,##0" title="Palm price (IDR/tonne)"/>
+<BigValue data={favorable_counts} value=effective_harvest_days title="Effective harvest days"/>
+<BigValue data={favorable_counts} value=spray_days title="Spray-favorable days"/>
 
-## CPO price trend
+## Palm price trend (local currency)
 
-```sql cpo_trend
-select distinct operation_date, cpo_usd_per_tonne
+```sql price_trend
+select distinct operation_date, cpo_idr_per_tonne
 from palm.operations_daily
+where cpo_idr_per_tonne is not null
 order by operation_date
 ```
 
-<LineChart data={cpo_trend} x=operation_date y=cpo_usd_per_tonne yAxisTitle="USD / tonne"/>
+<LineChart data={price_trend} x=operation_date y=cpo_idr_per_tonne yAxisTitle="IDR / tonne"/>
 
 ## Favorable operation-days by region
 
@@ -50,21 +53,4 @@ order by r.region_name
 
 <BarChart data={by_region} x=region_name y={['fertilize','harvest','spray']} type=grouped yAxisTitle="favorable days"/>
 
-## Recent daily detail
-
-```sql recent
-select
-    o.operation_date,
-    r.region_name,
-    round(o.temp_mean_c, 1) as temp_c,
-    round(o.precip_mm, 1) as precip_mm,
-    o.is_harvest_favorable as harvest_ok,
-    o.is_spray_favorable as spray_ok,
-    round(o.cpo_usd_per_tonne, 0) as cpo_usd
-from palm.operations_daily o
-join palm.region r on o.region_key = r.region_key
-order by o.operation_date desc, r.region_name
-limit 30
-```
-
-<DataTable data={recent} rows=10/>
+Explore further: the [Operations Planner](/operations) for per-region daily guidance, or the [Commodity Market](/market) for the palm-vs-soybean price story. Methodology and data lineage are on the [Methodology](/methodology) page.
