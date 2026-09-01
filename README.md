@@ -47,10 +47,11 @@ Ingestion attempts a live fetch and falls back to deterministic synthetic data, 
 | **SCD2 snapshot** on commodity price | change data capture |
 | **model contract** on `fct_commodity_price_daily` | data governance |
 | custom generic test `non_negative` + not_null/unique/relationships/accepted_range | data quality |
+| **dbt unit tests** on ASOF forward-fill & business-rule boundaries | logic testing beyond data shape |
 | **exposures** + `dbt docs` lineage | documentation |
 | GitHub Actions: `dbt build` + Pages deploy | CI/CD |
 
-Verified: `dbt build` → **PASS=56, 0 errors**; Evidence build renders 4 pages with no query errors.
+Verified: `dbt build` → **PASS=59, 0 errors** (incl. 3 dbt unit tests); Evidence build renders 4 pages with no query errors.
 
 ## 🧠 Architectural & Design Decisions
 
@@ -67,7 +68,7 @@ Key engineering trade-offs evaluated during system design:
 This project was built following modular analytics engineering lifecycle phases:
 1. **Ingestion Layer**: Keyless multi-source Python extractors (`Open-Meteo`, `Frankfurter`, `Nager.Date`, `World Bank`) with deterministic fallback seeds for offline testing.
 2. **Kimball Dimensional Modeling**: Staging (`stg_`) cleaning → Intermediate (`int_`) join/enrichment → Marts (`dim_`, `fct_`) with star schema design.
-3. **Data Quality Rigor**: 56 unit & generic tests (`non_negative`, `accepted_range`, foreign keys, contracts).
+3. **Data Quality Rigor**: 59 checks — 42 generic/singular tests (`non_negative`, `accepted_range`, foreign keys, contracts) + **3 dbt unit tests** proving ASOF forward-fill and agronomy rule boundaries (mutation-verified).
 4. **BI & Presentation**: Evidence.dev metrics definitions and static dashboard build.
 5. **CI/CD Automation**: GitHub Actions running automated `dbt build` test suites on pull requests and automated deployments to GitHub Pages.
 
