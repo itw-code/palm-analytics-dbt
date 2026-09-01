@@ -284,7 +284,9 @@ def main() -> int:
 
     end_date = resolve_end_date(args.end_date)
     dates = date_range(args.window_days, end_date)
-    forecast_dates = [end_date + dt.timedelta(days=i) for i in range(1, FORECAST_WINDOW + 1)]
+    # Forecast is ALWAYS relative to real today (prescriptive), history stays pinned for determinism
+    _today = dt.date.today()
+    forecast_dates = [_today + dt.timedelta(days=i) for i in range(1, FORECAST_WINDOW + 1)]
     years = sorted({d.year for d in dates} | {d.year for d in forecast_dates})
     months = month_starts(dates)
 
