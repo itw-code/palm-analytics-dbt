@@ -67,6 +67,9 @@ jobs:
           ls -lh palm.duckdb dashboard/sources/palm/palm.duckdb
         env:
           INGEST_REQUIRE_LIVE: "0"
+          # Schedule & manual dispatch ingest data through YESTERDAY (truly fresh).
+          # Push/PR runs keep the pinned 2026-06-30 window so CI stays deterministic.
+          PALM_USE_LIVE_DATE: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' && '1' || '0' }}
 
       - name: Summarise ingestion & freshness
         if: always() && steps.warehouse.outcome != 'skipped'

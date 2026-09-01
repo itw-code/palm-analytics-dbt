@@ -50,6 +50,9 @@ jobs:
           cat ingestion_manifest.json
         env:
           INGEST_REQUIRE_LIVE: "0"
+          # Schedule & manual dispatch ingest through YESTERDAY (fresh data);
+          # push/PR keep the pinned 2026-06-30 window for deterministic CI.
+          PALM_USE_LIVE_DATE: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' && '1' || '0' }}
 
       - name: Summarise ingestion provenance
         if: always() && steps.ingest.outcome != 'skipped'
