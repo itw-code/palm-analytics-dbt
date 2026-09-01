@@ -105,16 +105,25 @@ jobs:
               print(f\"- {r.get('unique_id')}: **{r.get('status')}**\")
           " >> $GITHUB_STEP_SUMMARY || true
           fi
-          # Also surface row counts quickly
+          # Also surface row counts quickly (raw lives in DuckLake, marts in palm.duckdb)
           python -c "
           import duckdb
           try:
-              con=duckdb.connect('palm.duckdb', read_only=True)
-              for t in ['raw_weather','raw_fx_rate','raw_holidays','raw_commodity_price']:
-                  n=con.execute(f'select count(*) from {t}').fetchone()[0]
+              con=duckdb.connect()
+              con.execute('LOAD ducklake')
+              con.execute(\"ATTACH 'ducklake:palm_lake/palm.ducklake' AS palm_raw (DATA_PATH 'palm_lake/data')\")
+              for t in ['raw_weather','raw_weather_forecast','raw_fx_rate','raw_holidays','raw_commodity_price']:
+                  n=con.execute(f'select count(*) from palm_raw.main.{t}').fetchone()[0]
                   print(f'{t}: {n}')
           except Exception as e:
-              print(f'(row-count check failed: {e})')
+              print(f'(lake row-count check failed: {e})')
+          try:
+              con2=duckdb.connect('palm.duckdb', read_only=True)
+              for t in ['fct_estate_operations_daily','fct_estate_forecast_7day','sl_metrics_daily']:
+                  n=con2.execute(f'select count(*) from {t}').fetchone()[0]
+                  print(f'{t}: {n}')
+          except Exception as e:
+              print(f'(mart row-count check failed: {e})')
           " 2>&1 | tee -a $GITHUB_STEP_SUMMARY || true
 
       - uses: actions/setup-node@v4
