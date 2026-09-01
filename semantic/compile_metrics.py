@@ -151,7 +151,9 @@ def main() -> int:
             skipped.append(f"{name} (type '{t}' not resolvable by the OSS compiler)")
             continue
         if t == "cumulative":
-            window = metrics[name]["type_params"].get("window") or "7 days"
+            tp = metrics[name]["type_params"]
+            ctp = tp.get("cumulative_type_params") or {}
+            window = ctp.get("window") or tp.get("window") or "7 days"
             n_days = int("".join(ch for ch in str(window) if ch.isdigit()) or 7)
             ctes.append(
                 f"m__{name} as (\n"

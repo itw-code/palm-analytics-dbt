@@ -61,4 +61,5 @@ sources:
             tests:
               - not_null
               - accepted_values:
-                  values: ['palm_oil', 'soybean_oil']
+                  arguments:
+                    values: ['palm_oil', 'soybean_oil']

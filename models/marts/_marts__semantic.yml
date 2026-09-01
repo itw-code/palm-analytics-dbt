@@ -172,4 +172,5 @@ metrics:
     label: Harvest value, trailing 7 days (IDR)
     type_params:
       measure: harvest_value_idr_sum
-      window: 7 days
+      cumulative_type_params:
+        window: 7 days
