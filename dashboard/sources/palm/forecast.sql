@@ -1,0 +1,20 @@
+select
+    region_key,
+    forecast_date,
+    horizon_days,
+    temp_mean_c,
+    precip_mm,
+    wind_max_kmh,
+    humidity_pct,
+    soil_moisture,
+    water_deficit_mm,
+    is_fertilize_favorable,
+    is_harvest_favorable,
+    is_spray_favorable,
+    is_effective_harvest_day,
+    is_holiday,
+    is_weekend,
+    cpo_usd_per_tonne,
+    usd_idr,
+    cpo_idr_per_tonne
+from fct_estate_forecast_7day

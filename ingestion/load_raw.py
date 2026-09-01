@@ -18,7 +18,7 @@ ACID snapshot metadata from DuckDB Labs. Every run creates a new lake snapshot,
 so the raw layer is point-in-time queryable ("what did the API return on March
 3?") - the manifest records the snapshot id for auditability.
 
-Writes lake tables: palm_raw.main.raw_weather, raw_fx_rate, raw_holidays, raw_commodity_price
+Writes lake tables: palm_raw.main.raw_weather, raw_weather_forecast, raw_fx_rate, raw_holidays, raw_commodity_price
 """
 from __future__ import annotations
 
@@ -49,6 +49,8 @@ REGIONS = {
 # or --end-date for a live scheduled run (e.g. yesterday).
 DEFAULT_END_DATE = dt.date(2026, 6, 30)
 WINDOW_DAYS = 120
+FORECAST_WINDOW = 7
+FORECAST_DAILY_VARS = "temperature_2m_mean,precipitation_sum,wind_speed_10m_max,et0_fao_evapotranspiration,relative_humidity_2m_mean,soil_moisture_0_to_10cm_mean"
 
 
 def resolve_end_date(cli_end_date: str | None) -> dt.date:
@@ -137,6 +139,44 @@ def synth_weather(region, seed_offset, dates) -> list[dict]:
             "temp_mean_c": round(temp, 2), "precip_mm": round(precip, 2), "wind_max_kmh": round(wind, 2),
             "et0_mm": round(et0, 2), "humidity_pct": round(humidity, 1), "soil_moisture": soil,
         })
+    return rows
+
+
+def fetch_forecast_live(region, lat, lon, dates) -> list[dict]:
+    """Fetch 7-day forecast from Open-Meteo.
+    Chooses forecast vs historical-forecast endpoint based on whether the window
+    is in the future (today is the pivot). Historical-forecast covers past dates
+    so deterministic CI with a fixed END_DATE keeps working offline."""
+    start, end = dates[0].isoformat(), dates[-1].isoformat()
+    today = dt.date.today().isoformat()
+    if end < today:
+        base = "https://historical-forecast-api.open-meteo.com/v1/forecast"
+    elif start >= today:
+        base = "https://api.open-meteo.com/v1/forecast"
+    else:
+        base = "https://api.open-meteo.com/v1/forecast"
+    url = (
+        f"{base}?latitude={lat}&longitude={lon}&start_date={start}&end_date={end}"
+        f"&daily={FORECAST_DAILY_VARS}&timezone=Asia%2FJakarta"
+    )
+    r = requests.get(url, timeout=25)
+    r.raise_for_status()
+    d = r.json()["daily"]
+
+    def col(name):
+        return d.get(name) or [None] * len(d["time"])
+
+    temp, precip, wind = col("temperature_2m_mean"), col("precipitation_sum"), col("wind_speed_10m_max")
+    et0, hum, soil = col("et0_fao_evapotranspiration"), col("relative_humidity_2m_mean"), col("soil_moisture_0_to_10cm_mean")
+    rows = []
+    for i, day in enumerate(d["time"]):
+        rows.append({
+            "region": region, "obs_date": day,
+            "temp_mean_c": temp[i], "precip_mm": precip[i], "wind_max_kmh": wind[i],
+            "et0_mm": et0[i], "humidity_pct": hum[i], "soil_moisture": soil[i],
+        })
+    if not rows:
+        raise ValueError("Forecast API returned 0 rows")
     return rows
 
 
@@ -244,7 +284,8 @@ def main() -> int:
 
     end_date = resolve_end_date(args.end_date)
     dates = date_range(args.window_days, end_date)
-    years = sorted({d.year for d in dates})
+    forecast_dates = [end_date + dt.timedelta(days=i) for i in range(1, FORECAST_WINDOW + 1)]
+    years = sorted({d.year for d in dates} | {d.year for d in forecast_dates})
     months = month_starts(dates)
 
     provenance: dict = {
@@ -276,6 +317,27 @@ def main() -> int:
             synth_count += 1
             print(f"[weather] synthetic fallback: {region} ({e.__class__.__name__}: {e})", file=sys.stderr)
             provenance["sources"].setdefault("weather", {})[region] = {"mode": "synthetic", "rows": len(rows), "error": f"{e.__class__.__name__}: {e}"}
+
+    # forecast (7 days ahead) - prescriptive, not just retrospective
+    forecast = []
+    for offset, (region, (lat, lon)) in enumerate(REGIONS.items()):
+        try:
+            rows = fetch_with_retry(lambda r=region, la=lat, lo=lon: fetch_forecast_live(r, la, lo, forecast_dates),
+                                    label=f"forecast:{region}")
+            forecast += rows
+            print(f"[forecast] live OK: {region} ({len(rows)} rows)")
+            provenance["sources"].setdefault("forecast", {})[region] = {"mode": "live", "rows": len(rows)}
+        except Exception as e:
+            if not allow_synthetic:
+                print(f"[forecast] live FAILED {region}: {e}", file=sys.stderr)
+                provenance["sources"].setdefault("forecast", {})[region] = {"mode": "failed", "error": f"{e.__class__.__name__}: {e}"}
+                _write_manifest(args.manifest, provenance, synth_count, status="failed")
+                return 1
+            rows = synth_weather(region, offset + 10, forecast_dates)
+            forecast += rows
+            synth_count += 1
+            print(f"[forecast] synthetic fallback: {region} ({e.__class__.__name__}: {e})", file=sys.stderr)
+            provenance["sources"].setdefault("forecast", {})[region] = {"mode": "synthetic", "rows": len(rows), "error": f"{e.__class__.__name__}: {e}"}
 
     # fx
     try:
@@ -340,6 +402,14 @@ def main() -> int:
         [(r["region"], r["obs_date"], r["temp_mean_c"], r["precip_mm"], r["wind_max_kmh"],
           r["et0_mm"], r["humidity_pct"], r["soil_moisture"]) for r in weather])
 
+    con.execute(f"DROP TABLE IF EXISTS {LAKE_ALIAS}.main.raw_weather_forecast")
+    con.execute(f"""CREATE TABLE {LAKE_ALIAS}.main.raw_weather_forecast (
+        region VARCHAR, forecast_date DATE, temp_mean_c DOUBLE, precip_mm DOUBLE, wind_max_kmh DOUBLE,
+        et0_mm DOUBLE, humidity_pct DOUBLE, soil_moisture DOUBLE)""")
+    con.executemany(f"INSERT INTO {LAKE_ALIAS}.main.raw_weather_forecast VALUES (?,?,?,?,?,?,?,?)",
+        [(r["region"], r["obs_date"], r["temp_mean_c"], r["precip_mm"], r["wind_max_kmh"],
+          r["et0_mm"], r["humidity_pct"], r["soil_moisture"]) for r in forecast])
+
     con.execute(f"DROP TABLE IF EXISTS {LAKE_ALIAS}.main.raw_fx_rate")
     con.execute(f"CREATE TABLE {LAKE_ALIAS}.main.raw_fx_rate (rate_date DATE, usd_idr DOUBLE)")
     con.executemany(f"INSERT INTO {LAKE_ALIAS}.main.raw_fx_rate VALUES (?,?)", [(r["rate_date"], r["usd_idr"]) for r in fx])
@@ -354,7 +424,7 @@ def main() -> int:
         [(r["price_month"], r["commodity"], r["usd_per_tonne"]) for r in commodity])
 
     counts = {t: con.execute(f"SELECT count(*) FROM {LAKE_ALIAS}.main.{t}").fetchone()[0]
-              for t in ("raw_weather", "raw_fx_rate", "raw_holidays", "raw_commodity_price")}
+              for t in ("raw_weather", "raw_weather_forecast", "raw_fx_rate", "raw_holidays", "raw_commodity_price")}
     con.execute("COMMIT")
 
     # ACID snapshot id of this load - recorded in the manifest for point-in-time audits

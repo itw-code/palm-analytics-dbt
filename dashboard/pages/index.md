@@ -78,4 +78,4 @@ order by r.region_name
 
 <BarChart data={by_region} x=region_name y={['fertilize','harvest','spray']} type=grouped yAxisTitle="favorable days"/>
 
-Explore further: the [Operations Planner](/operations) for per-region daily guidance, or the [Commodity Market](/market) for the palm-vs-soybean price story. Methodology and data lineage are on the [Methodology](/methodology) page.
+Explore further: the [7-Day Forward Planner](/forecast) for prescriptive next-week actions, the [Operations Planner](/operations) for per-region daily guidance, or the [Commodity Market](/market) for the palm-vs-soybean price story. Methodology and data lineage are on the [Methodology](/methodology) page.

@@ -38,6 +38,19 @@ sources:
           - name: usd_idr
             tests: [not_null]
 
+      - name: raw_weather_forecast
+        description: 7-day forecast weather per estate region (Open-Meteo Forecast / Historical-Forecast).
+        loaded_at_field: "cast(forecast_date as timestamp)"
+        freshness:
+          warn_after: {count: 3, period: day}
+          error_after: {count: 10, period: day}
+          filter: "forecast_date is not null"
+        columns:
+          - name: region
+            tests: [not_null]
+          - name: forecast_date
+            tests: [not_null]
+
       - name: raw_holidays
         description: Indonesia public holidays (Nager.Date).
         columns:

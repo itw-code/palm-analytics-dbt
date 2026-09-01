@@ -1,7 +1,6 @@
--- Date spine covering the weather window; the backbone for dim_date and daily forward-fills.
-with bounds as (
-    select min(weather_date) as d0, max(weather_date) as d1
-    from {{ ref('stg_weather') }}
-)
-select cast(unnest(generate_series(d0, d1, interval '1 day')) as date) as date_day
-from bounds
+-- Date spine covering historical weather + 7-day forecast; backbone for dim_date and forward-fills.
+select cast(unnest(generate_series(
+    (select min(weather_date) from {{ ref('stg_weather') }}),
+    (select max(weather_date) from {{ ref('stg_weather_forecast') }}),
+    interval '1 day'
+)) as date) as date_day
