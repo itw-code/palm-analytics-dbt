@@ -4,16 +4,30 @@ on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    - cron: '0 0 * * *'  # daily 00:00 UTC — validates warehouse even when no code push
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write  # needed to open an issue on scheduled-run failures
+
+# Scheduled runs must not cancel in-progress manual pushes/PR checks and vice-versa.
+concurrency:
+  group: dbt-ci-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
 
       - name: Install dependencies
         run: pip install -r requirements.txt
@@ -22,14 +36,130 @@ jobs:
         run: dbt deps
 
       - name: Ingest raw data
-        run: python ingestion/load_raw.py
+        id: ingest
+        run: |
+          # On schedule we still allow synthetic fallback so the pipeline never goes
+          # fully red because of a transient API outage, but we surface the
+          # degradation loudly via manifest + workflow summary (see next step).
+          # To make the schedule fail-fast instead, set INGEST_REQUIRE_LIVE=1.
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "${INGEST_REQUIRE_LIVE:-0}" = "1" ]; then
+            python ingestion/load_raw.py --require-live
+          else
+            python ingestion/load_raw.py
+          fi
+          cat ingestion_manifest.json
+        env:
+          INGEST_REQUIRE_LIVE: "0"
+
+      - name: Summarise ingestion provenance
+        if: always() && steps.ingest.outcome != 'skipped'
+        run: |
+          echo "### Ingestion provenance" >> $GITHUB_STEP_SUMMARY
+          if [ -f ingestion_manifest.json ]; then
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            cat ingestion_manifest.json >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            SYNTH=$(python -c "import json; d=json.load(open('ingestion_manifest.json')); print(d.get('synthetic_sources',0))" 2>/dev/null || echo 0)
+            if [ "$SYNTH" != "0" ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "> [!WARNING]" >> $GITHUB_STEP_SUMMARY
+              echo "> **$SYNTH source(s) used synthetic fallback.** Check \`ingestion_manifest.json\` — in production this merits investigation. Commodity price is always synthetic until the World Bank parser is wired." >> $GITHUB_STEP_SUMMARY
+            else
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "> [!NOTE]" >> $GITHUB_STEP_SUMMARY
+              echo "> All sources ingested live — no synthetic fallback." >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "No ingestion_manifest.json found (ingestion step may have failed early)." >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Event:** \`${{ github.event_name }}\` • **Ref:** \`${{ github.ref }}\`" >> $GITHUB_STEP_SUMMARY
 
       - name: dbt build (run + test every model, incl. seeds & snapshot)
         run: dbt build --profiles-dir .
 
-      - name: dbt source freshness (advisory)
-        run: dbt source freshness --profiles-dir .
-        continue-on-error: true
+      - name: dbt source freshness
+        id: freshness
+        run: |
+          # Write machine-readable output so the next step can promote warnings to visible alerts.
+          dbt source freshness --profiles-dir . --output target/freshness.json || true
+          cat target/freshness.json 2>/dev/null | head -c 4000 || echo "(no freshness.json)"
+          # Also emit human-readable summary to the workflow summary
+          echo "### Source freshness" >> $GITHUB_STEP_SUMMARY
+          python -c "
+          import json, pathlib
+          p = pathlib.Path('target/freshness.json')
+          if not p.exists():
+              print('No freshness.json emitted.')
+              raise SystemExit(0)
+          j=json.load(open(p))
+          for src in j.get('results', []):
+              name=src.get('unique_id','?')
+              status=src.get('status')
+              max_loaded=src.get('max_loaded_at') or src.get('max_loaded_at_time') or '?'
+              print(f'- **{name}**: {status} (max_loaded_at={max_loaded})')
+          " >> $GITHUB_STEP_SUMMARY || echo "freshness summary failed" >> $GITHUB_STEP_SUMMARY
+          # Fail the job only if dbt flagged an error (not just warn); warnings are surfaced above.
+          python -c "
+          import json, pathlib, sys
+          p = pathlib.Path('target/freshness.json')
+          if not p.exists():
+              raise SystemExit(0)
+          j=json.load(open(p))
+          statuses=[r.get('status') for r in j.get('results',[])]
+          if 'error' in statuses or 'fail' in statuses:
+              print('::error::source freshness reported error/fail - failing job')
+              sys.exit(1)
+          if 'warn' in statuses:
+              print('::warning::source freshness reported warn - see summary')
+          "
+
+      - name: Flag stale freshness as annotation
+        if: steps.freshness.outcome == 'failure'
+        run: echo "::error::dbt source freshness failed — data may be stale; check target/freshness.json"
 
       - name: dbt docs generate (lineage)
         run: dbt docs generate --profiles-dir .
+
+      - name: Upload diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbt-diagnostics-${{ github.run_id }}
+          path: |
+            target/run_results.json
+            target/manifest.json
+            target/freshness.json
+            ingestion_manifest.json
+            logs/dbt.log
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Open issue on scheduled failure
+        if: failure() && github.event_name == 'schedule'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `Scheduled dbt build failed — ${new Date().toISOString().slice(0,10)}`;
+            const body = [
+              `Automated **dbt build** (schedule 00:00 UTC) failed on \`${{ github.ref }}\`.`,
+              ``,
+              `**Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`,
+              `**Commit:** ${{ github.sha }}`,
+              ``,
+              `Check the run logs and the uploaded \`dbt-diagnostics\` artifact.`,
+              `Common causes: transient API outage (see ingestion_manifest.json synthetic fallback), dbt test failure, or source freshness error.`,
+              ``,
+              `> This issue was opened automatically by the \`dbt build\` workflow. Close it once investigated.`,
+            ].join('\n');
+            // Avoid spamming: if an open issue with the same title prefix exists, comment instead.
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo, state: 'open', per_page: 20,
+            });
+            const dup = existing.data.find(i => i.title.startsWith('Scheduled dbt build failed'));
+            if (dup) {
+              await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: dup.number, body });
+              core.info(`Commented on existing issue #${dup.number} instead of opening a duplicate.`);
+            } else {
+              await github.rest.issues.create({ owner: context.repo.owner, repo: context.repo.repo, title, body, labels: ['needs-triage'] });
+            }

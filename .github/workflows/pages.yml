@@ -3,43 +3,125 @@ name: deploy dashboard
 on:
   push:
     branches: [main]
+  schedule:
+    - cron: '0 0 * * *'  # daily 00:00 UTC — full E2E refresh (ingest + dbt + Evidence build)
   workflow_dispatch:
 
 permissions:
   contents: read
   pages: write
   id-token: write
+  issues: write  # to open an issue when the scheduled run fails or degrades
 
+# Important: cancel-in-progress: false so a scheduled run queues behind a
+# manual push (or vice-versa) instead of cancelling it. Without this a long
+# Evidence build could be killed mid-deploy by the daily cron.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
 
       - name: Build dbt warehouse
+        id: warehouse
         run: |
           pip install -r requirements.txt
           dbt deps
-          python ingestion/load_raw.py
+          # Scheduled runs default to allow synthetic fallback so a transient API outage
+          # doesn't leave Pages stale for days; the degradation is surfaced via
+          # ingestion_manifest.json + workflow summary + optional issue.
+          # Set INGEST_REQUIRE_LIVE=1 as a repo variable to make the schedule fail-fast instead.
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "${INGEST_REQUIRE_LIVE:-0}" = "1" ]; then
+            python ingestion/load_raw.py --require-live
+          else
+            python ingestion/load_raw.py
+          fi
           dbt build --profiles-dir .
+          # Advisory freshness — never hide it behind continue-on-error; parse the JSON instead.
+          dbt source freshness --profiles-dir . --output target/freshness.json || true
+          # Fail only on error, surface warn in the summary
+          python -c "
+          import json, pathlib, sys
+          p = pathlib.Path('target/freshness.json')
+          if p.exists():
+              j=json.load(open(p))
+              statuses=[r.get('status') for r in j.get('results',[])]
+              print('freshness statuses:', statuses)
+              if 'error' in statuses or 'fail' in statuses:
+                  print('::error::source freshness error/fail detected')
+                  sys.exit(1)
+              if 'warn' in statuses:
+                  print('::warning::source freshness warn detected - will annotate summary')
+          "
           cp palm.duckdb dashboard/sources/palm/palm.duckdb
+          ls -lh palm.duckdb dashboard/sources/palm/palm.duckdb
+        env:
+          INGEST_REQUIRE_LIVE: "0"
+
+      - name: Summarise ingestion & freshness
+        if: always() && steps.warehouse.outcome != 'skipped'
+        run: |
+          echo "### Warehouse build provenance" >> $GITHUB_STEP_SUMMARY
+          echo "**Event:** \`${{ github.event_name }}\` • **Ref:** \`${{ github.ref }}\` • **SHA:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f ingestion_manifest.json ]; then
+            echo "**Ingestion manifest:**" >> $GITHUB_STEP_SUMMARY
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            cat ingestion_manifest.json >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            SYNTH=$(python -c "import json; print(json.load(open('ingestion_manifest.json')).get('synthetic_sources',0))" 2>/dev/null || echo 0)
+            if [ "$SYNTH" != "0" ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "> [!WARNING]" >> $GITHUB_STEP_SUMMARY
+              echo "> **$SYNTH source(s) used synthetic fallback during this scheduled run.** The dashboard was still deployed but data quality is degraded. See \`ingestion_manifest.json\`. Commodity price is always synthetic until the World Bank parser is wired." >> $GITHUB_STEP_SUMMARY
+            else
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "> All sources ingested live." >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f target/freshness.json ]; then
+            echo "**Source freshness:**" >> $GITHUB_STEP_SUMMARY
+            python -c "
+          import json, pathlib
+          p=pathlib.Path('target/freshness.json')
+          j=json.load(open(p))
+          for r in j.get('results',[]):
+              print(f\"- {r.get('unique_id')}: **{r.get('status')}**\")
+          " >> $GITHUB_STEP_SUMMARY || true
+          fi
+          # Also surface row counts quickly
+          python -c "
+          import duckdb
+          try:
+              con=duckdb.connect('palm.duckdb', read_only=True)
+              for t in ['raw_weather','raw_fx_rate','raw_holidays','raw_commodity_price']:
+                  n=con.execute(f'select count(*) from {t}').fetchone()[0]
+                  print(f'{t}: {n}')
+          except Exception as e:
+              print(f'(row-count check failed: {e})')
+          " 2>&1 | tee -a $GITHUB_STEP_SUMMARY || true
 
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
 
       - name: Build Evidence site
         working-directory: dashboard
         run: |
-          npm install --no-audit --no-fund
+          npm ci --no-audit --no-fund
           npm run sources
           npm run build
 
@@ -47,6 +129,19 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dashboard/build
+
+      - name: Upload warehouse diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: warehouse-diagnostics-${{ github.run_id }}
+          path: |
+            target/run_results.json
+            target/freshness.json
+            ingestion_manifest.json
+            palm.duckdb
+          if-no-files-found: ignore
+          retention-days: 14
 
   deploy:
     needs: build
@@ -57,3 +152,35 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
+  # Separate job so we can gate on build failure but still run even if deploy is skipped
+  notify-on-scheduled-failure:
+    needs: build
+    if: failure() && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `Scheduled dashboard refresh failed — ${new Date().toISOString().slice(0,10)}`;
+            const body = [
+              `Automated **deploy dashboard** (schedule 00:00 UTC) failed on \`${{ github.ref }}\` — the Evidence site was **not** updated.`,
+              ``,
+              `**Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`,
+              `**Commit:** ${{ github.sha }}`,
+              ``,
+              `Check the run summary for the ingestion manifest and freshness status, plus the \`warehouse-diagnostics\` artifact if present.`,
+              `Common causes: API outage (synthetic fallback when \`--require-live\` is enforced), \`dbt build\` test failure, or source freshness error.`,
+              ``,
+              `> This issue was opened automatically. Close it once investigated.`,
+            ].join('\n');
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo, state: 'open', per_page: 20,
+            });
+            const dup = existing.data.find(i => i.title.startsWith('Scheduled dashboard refresh failed'));
+            if (dup) {
+              await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: dup.number, body });
+              core.info(`Commented on existing issue #${dup.number} instead of opening a duplicate.`);
+            } else {
+              await github.rest.issues.create({ owner: context.repo.owner, repo: context.repo.repo, title, body, labels: ['needs-triage'] });
+            }
