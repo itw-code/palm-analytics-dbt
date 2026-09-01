@@ -13,7 +13,12 @@ production runs). When synthetic fallback is used, a machine-readable manifest
 (ingestion_manifest.json) is written and a prominent WARNING is emitted so the
 degradation is never silent.
 
-Writes raw tables: raw_weather, raw_fx_rate, raw_holidays, raw_commodity_price
+Raw tables land in a DuckLake catalog (palm_lake/): open parquet data files with
+ACID snapshot metadata from DuckDB Labs. Every run creates a new lake snapshot,
+so the raw layer is point-in-time queryable ("what did the API return on March
+3?") - the manifest records the snapshot id for auditability.
+
+Writes lake tables: palm_raw.main.raw_weather, raw_fx_rate, raw_holidays, raw_commodity_price
 """
 from __future__ import annotations
 
@@ -28,7 +33,10 @@ import time
 import duckdb
 import requests
 
-DB_PATH = "palm.duckdb"
+LAKE_DIR = "palm_lake"
+LAKE_META = f"{LAKE_DIR}/palm.ducklake"
+LAKE_DATA = f"{LAKE_DIR}/data"
+LAKE_ALIAS = "palm_raw"
 MANIFEST_DEFAULT = "ingestion_manifest.json"
 
 REGIONS = {
@@ -318,31 +326,50 @@ def main() -> int:
         print(f"[commodity] live OK ({len(commodity)} rows)")
         provenance["sources"]["commodity"] = {"mode": "live", "rows": len(commodity)}
 
-    con = duckdb.connect(DB_PATH)
-    con.execute("""CREATE OR REPLACE TABLE raw_weather (
+    con = _open_lake()
+    # One ACID transaction for the whole load: either every raw table lands or
+    # none does (a mid-run crash leaves the previous snapshot readable), and we
+    # get ONE new snapshot instead of hundreds (each autocommit batch otherwise
+    # commits its own snapshot + parquet file).
+    con.execute("BEGIN TRANSACTION")
+    con.execute(f"DROP TABLE IF EXISTS {LAKE_ALIAS}.main.raw_weather")
+    con.execute(f"""CREATE TABLE {LAKE_ALIAS}.main.raw_weather (
         region VARCHAR, obs_date DATE, temp_mean_c DOUBLE, precip_mm DOUBLE, wind_max_kmh DOUBLE,
         et0_mm DOUBLE, humidity_pct DOUBLE, soil_moisture DOUBLE)""")
-    con.executemany("INSERT INTO raw_weather VALUES (?,?,?,?,?,?,?,?)",
+    con.executemany(f"INSERT INTO {LAKE_ALIAS}.main.raw_weather VALUES (?,?,?,?,?,?,?,?)",
         [(r["region"], r["obs_date"], r["temp_mean_c"], r["precip_mm"], r["wind_max_kmh"],
           r["et0_mm"], r["humidity_pct"], r["soil_moisture"]) for r in weather])
 
-    con.execute("CREATE OR REPLACE TABLE raw_fx_rate (rate_date DATE, usd_idr DOUBLE)")
-    con.executemany("INSERT INTO raw_fx_rate VALUES (?,?)", [(r["rate_date"], r["usd_idr"]) for r in fx])
+    con.execute(f"DROP TABLE IF EXISTS {LAKE_ALIAS}.main.raw_fx_rate")
+    con.execute(f"CREATE TABLE {LAKE_ALIAS}.main.raw_fx_rate (rate_date DATE, usd_idr DOUBLE)")
+    con.executemany(f"INSERT INTO {LAKE_ALIAS}.main.raw_fx_rate VALUES (?,?)", [(r["rate_date"], r["usd_idr"]) for r in fx])
 
-    con.execute("CREATE OR REPLACE TABLE raw_holidays (holiday_date DATE, holiday_name VARCHAR)")
-    con.executemany("INSERT INTO raw_holidays VALUES (?,?)", [(r["holiday_date"], r["holiday_name"]) for r in holidays])
+    con.execute(f"DROP TABLE IF EXISTS {LAKE_ALIAS}.main.raw_holidays")
+    con.execute(f"CREATE TABLE {LAKE_ALIAS}.main.raw_holidays (holiday_date DATE, holiday_name VARCHAR)")
+    con.executemany(f"INSERT INTO {LAKE_ALIAS}.main.raw_holidays VALUES (?,?)", [(r["holiday_date"], r["holiday_name"]) for r in holidays])
 
-    con.execute("CREATE OR REPLACE TABLE raw_commodity_price (price_month DATE, commodity VARCHAR, usd_per_tonne DOUBLE)")
-    con.executemany("INSERT INTO raw_commodity_price VALUES (?,?,?)",
+    con.execute(f"DROP TABLE IF EXISTS {LAKE_ALIAS}.main.raw_commodity_price")
+    con.execute(f"CREATE TABLE {LAKE_ALIAS}.main.raw_commodity_price (price_month DATE, commodity VARCHAR, usd_per_tonne DOUBLE)")
+    con.executemany(f"INSERT INTO {LAKE_ALIAS}.main.raw_commodity_price VALUES (?,?,?)",
         [(r["price_month"], r["commodity"], r["usd_per_tonne"]) for r in commodity])
 
-    counts = {t: con.execute(f"SELECT count(*) FROM {t}").fetchone()[0]
+    counts = {t: con.execute(f"SELECT count(*) FROM {LAKE_ALIAS}.main.{t}").fetchone()[0]
               for t in ("raw_weather", "raw_fx_rate", "raw_holidays", "raw_commodity_price")}
+    con.execute("COMMIT")
+
+    # ACID snapshot id of this load - recorded in the manifest for point-in-time audits
+    lake_snapshot = None
+    try:
+        lake_snapshot = con.execute(f"SELECT max(snapshot_id) FROM ducklake_snapshots('{LAKE_ALIAS}')").fetchone()[0]
+    except Exception as e:
+        print(f"[lake] snapshot id lookup failed (non-fatal): {e}", file=sys.stderr)
     con.close()
-    print(f"[duckdb] {counts} -> {DB_PATH}")
+    print(f"[ducklake] {counts} snapshot={lake_snapshot} -> {LAKE_META}")
 
     status = "synthetic_fallback" if synth_count > 0 else "live"
-    _write_manifest(args.manifest, provenance, synth_count, status=status, counts=counts)
+    prov = provenance
+    prov_lake = {"catalog": LAKE_META, "data_path": LAKE_DATA, "snapshot_id": lake_snapshot}
+    _write_manifest(args.manifest, prov, synth_count, status=status, counts=counts, lake=prov_lake)
 
     if synth_count > 0:
         # Never silent: emit a banner that survives in logs and is detectable by CI.
@@ -355,9 +382,31 @@ def main() -> int:
     return 0
 
 
-def _write_manifest(path: str, provenance: dict, synth_count: int, status: str = "live", counts: dict | None = None):
+def _open_lake():
+    """Open a DuckDB connection with the DuckLake catalog attached as `palm_raw`.
+    The ducklake extension auto-installs on first use (needs network on cold CI runners)."""
+    os.makedirs(LAKE_DIR, exist_ok=True)
+    con = duckdb.connect()          # ephemeral; the lake + parquet files are the state
+    try:
+        con.execute("INSTALL ducklake")
+        con.execute("LOAD ducklake")
+    except Exception as e:
+        raise SystemExit(
+            f"[lake] FATAL: ducklake extension unavailable ({e.__class__.__name__}: {e}). "
+            "Cold runner needs network for extension install; re-run or pin duckdb>=1.2."
+        )
+    con.execute(
+        f"ATTACH 'ducklake:{LAKE_META}' AS {LAKE_ALIAS} (DATA_PATH '{LAKE_DATA}')"
+    )
+    return con
+
+
+def _write_manifest(path: str, provenance: dict, synth_count: int, status: str = "live", counts: dict | None = None, lake: dict | None = None):
     provenance["synthetic_sources"] = synth_count
     provenance["status"] = status
+    provenance["warehouse"] = "ducklake"
+    if lake:
+        provenance["lake"] = lake
     if counts:
         provenance["row_counts"] = counts
     try:

@@ -2,7 +2,11 @@ version: 2
 
 sources:
   - name: raw
-    description: Raw tables loaded by ingestion/load_raw.py into DuckDB from four free APIs.
+    description: >
+      Raw tables in the DuckLake catalog (palm_lake/: parquet files + ACID
+      snapshot metadata) loaded by ingestion/load_raw.py from four free APIs.
+      The `palm_raw` database is the profile's ATTACH alias for the DuckLake catalog.
+    database: palm_raw
     schema: main
     tables:
       - name: raw_weather

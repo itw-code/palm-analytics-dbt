@@ -1,5 +1,9 @@
 # Local profile. Run dbt with:  dbt build --profiles-dir .
 # For the hosted demo, set MOTHERDUCK_TOKEN and use `--target prod`.
+# Raw layer lives in a DuckLake catalog (palm_lake/) - the lakehouse table
+# format from DuckDB Labs: parquet data files + ACID snapshot metadata.
+# Ingestion writes raw_* tables into the `palm_raw` catalog; marts build into
+# palm.duckdb as before.
 palm_analytics:
   target: dev
   outputs:
@@ -7,7 +11,16 @@ palm_analytics:
       type: duckdb
       path: palm.duckdb
       threads: 4
+      extensions:
+        - ducklake
+      attach:
+        - path: "ducklake:palm_lake/palm.ducklake"
+          alias: palm_raw
+          options:
+            data_path: palm_lake/data
     prod:
       type: duckdb
       path: "md:palm_analytics?motherduck_token={{ env_var('MOTHERDUCK_TOKEN', '') }}"
       threads: 4
+      # NOTE: for MotherDuck, point this at managed DuckLake (md function) once
+      # the lake is migrated to object storage; CI only ever runs `dev`.

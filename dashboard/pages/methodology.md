@@ -17,17 +17,19 @@ All ingestion attempts a live fetch with retries and falls back to deterministic
 
 ## Transformation layers (dbt)
 
+- **raw layer (DuckLake)** - API payloads land in a DuckLake catalog (`palm_lake/`): open parquet data files with ACID snapshot metadata from DuckDB Labs. Each daily load commits as one immutable, point-in-time-queryable snapshot (the snapshot id is recorded in the ingestion manifest).
 - **staging** (`stg_*`) - one cleaned, typed model per source
 - **intermediate** (`int_*`) - reusable business logic: a date spine, forward-filled daily FX and commodity prices (DuckDB ASOF joins), and the agronomy suitability rules
 - **marts** - a Kimball star: `dim_date` (with weekend + holiday flags), `dim_region` (enriched with a seeded estate profile), `fct_estate_operations_daily` (incremental), and `fct_commodity_price_daily` (contract-enforced column types)
 
 ## Engineering practices demonstrated
 
-- 4 heterogeneous sources with **source freshness** checks (`warn` at 2 days for daily feeds / 35 days for monthly, `error` at 5 / 90 days)
+- 4 heterogeneous sources with **source freshness** checks (`warn` at 3 days for daily feeds / 35 days for monthly, `error` at 90 / 95 days)
+- a **DuckLake lakehouse raw layer** (parquet + ACID snapshots) feeding a DuckDB warehouse - the production object-storage-lakehouse pattern without cloud dependency
 - layered modelling (staging → intermediate → marts) with **seeds**
 - an **incremental** (`delete+insert`) materialization and an **SCD2 snapshot** on commodity prices
 - a **model contract** enforcing column types on the commodity mart
-- data quality: `not_null`, `unique`, `relationships`, `accepted_values`, `accepted_range`, and a **custom generic test** (`non_negative`)
+- data quality: `not_null`, `unique`, `relationships`, `accepted_values`, `accepted_range`, a **custom generic test** (`non_negative`), and **dbt unit tests** proving the ASOF forward-fill and business-rule boundaries
 - **exposures** linking this dashboard back to the models it depends on
 - CI/CD: `dbt build` on every push/PR + **daily 00:00 UTC scheduled refresh** (`pages.yml` runs ingest → dbt build → Evidence build → Pages deploy) with `concurrency.cancel-in-progress: false` so the cron queues behind manual pushes instead of cancelling them, plus workflow-summary and GitHub-Issue observability on failures
 

@@ -12,11 +12,11 @@ Open-Meteo   Frankfurter   Nager.Date   World Bank
  (weather)   (USD→IDR)     (holidays)   (palm/soy price)
      └─────────────┴────── ingestion/load_raw.py ──────┴─────────────┐
                                                                       ▼
-                                              DuckDB  (palm.duckdb · MotherDuck)
+                    DuckLake catalog  (palm_lake/: open parquet + ACID snapshots)
                                                                       │  dbt build
                                                                       ▼
                         sources → staging (stg_) → intermediate (int_) → marts (dim_/fct_)
-                              + seeds · snapshot (SCD2) · contract · tests · exposures
+                              + seeds · snapshot (SCD2) · contract · unit tests · exposures
                                                                       ▼
                              Evidence.dev dashboard        GitHub Actions CI
                         (Overview · Planner · Market)     (dbt build on every push)
@@ -33,12 +33,13 @@ Open-Meteo   Frankfurter   Nager.Date   World Bank
 | [Nager.Date](https://date.nager.at) | Indonesia public-holiday calendar |
 | [World Bank Pink Sheet](https://www.worldbank.org/en/research/commodity-markets) | monthly palm-oil & soybean-oil prices |
 
-Ingestion attempts a live fetch and falls back to deterministic synthetic data, so builds and CI are always reproducible offline.
+Ingestion attempts a live fetch and falls back to deterministic synthetic data, so builds and CI are always reproducible offline. Raw tables land in a **DuckLake** catalog (`palm_lake/`): open parquet data files with ACID snapshot metadata from DuckDB Labs - each daily load commits as one new lake snapshot, recorded in `ingestion_manifest.json` for point-in-time auditing.
 
 ## What this demonstrates
 | Feature | Competency |
 |---|---|
 | 4 heterogeneous sources + `dbt source freshness` | ingestion & source management |
+| **DuckLake lakehouse raw layer** (parquet + ACID snapshots per load) | modern warehouse table formats |
 | `seeds/region_profile.csv` | reference-data seeds |
 | staging → intermediate → marts layering | modular modeling |
 | `dim_date` (weekend + holiday flags), `dim_region`, `fct_*` | Kimball dimensional modeling |
@@ -58,6 +59,7 @@ Verified: `dbt build` → **PASS=59, 0 errors** (incl. 3 dbt unit tests); Eviden
 Key engineering trade-offs evaluated during system design:
 
 * **DuckDB over Postgres/Warehouse for local ELT**: Enables zero-infrastructure serverless analytical processing with vectorized columnar execution and seamless MotherDuck cloud scale-up, without container overhead or query latency bottlenecks.
+* **DuckLake for the raw layer, DuckDB file for marts**: Raw API payloads land in a DuckLake catalog (open parquet files + snapshot metadata) instead of the warehouse's main schema. That gives immutable, point-in-time-queryable ingestion history at near-zero cost, keeps the Evidence-serving file small, and mirrors the production pattern (object-storage lakehouse + warehouse marts) without any cloud dependency.
 * **ASOF Joins for Forward-Filling**: Instead of complex window functions or synthetic date cross joins to fill missing weekend commodity prices and exchange rates, DuckDB's native `ASOF` join aligns the most recent historical price to daily operational logs deterministically with `O(N log M)` performance.
 * **SCD Type 2 (`commodity_price_snapshot`)**: Tracks historical revision adjustments in World Bank Pink Sheet price estimates without destructive updates, preserving point-in-time financial auditability.
 * **Model Contracts on Core Marts**: Explicit schema contracts on `fct_commodity_price_daily` guarantee downstream dashboard stability by failing the dbt run before breaking consumer reports in Evidence.dev.
@@ -79,7 +81,7 @@ This project was built following modular analytics engineering lifecycle phases:
 python -m venv .venv && . .venv/Scripts/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-python ingestion/load_raw.py          # ingest raw data into DuckDB
+python ingestion/load_raw.py          # ingest raw data into the DuckLake catalog (palm_lake/)
 dbt deps && dbt build --profiles-dir . # build + test everything (seeds, snapshot, models)
 dbt docs generate --profiles-dir . && dbt docs serve --profiles-dir .  # lineage
 ```
