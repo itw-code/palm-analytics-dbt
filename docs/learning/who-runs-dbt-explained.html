@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Who Runs dbt? — Scheduler vs Tool, Explained Like You're 5</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --border: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --green: #3fb950; --blue: #58a6ff; --orange: #f0883e; --red: #f85149; --yellow: #d29922; --purple: #bc8cff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Segoe UI", system-ui, sans-serif; line-height: 1.7; padding: 2rem; }
+  .wrap { max-width: 1000px; margin: 0 auto; }
+  h1 { font-size: 1.9rem; margin-bottom: .3rem; }
+  h1 span { color: var(--orange); }
+  .sub { color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 2.2rem 0 .8rem; padding-bottom: .3rem; border-bottom: 1px solid var(--border); }
+  p { margin-bottom: .9rem; }
+  .story { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem 1.4rem; margin: 1rem 0; font-size: 1.02rem; }
+  .story .emoji { font-size: 1.6rem; margin-right: .4rem; }
+  code { background: #21262d; padding: .12rem .4rem; border-radius: 5px; font-family: Consolas, monospace; font-size: .88em; color: #ffa657; }
+  pre { background: #161b22; border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.2rem; overflow-x: auto; margin: .8rem 0 1.4rem; font-size: .85rem; line-height: 1.55; }
+  pre code { background: none; padding: 0; color: var(--text); }
+  .cm { color: #8b949e; } .kw { color: #ff7b72; } .str { color: #a5d6ff; } .fn { color: #d2a8ff; }
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .92rem; }
+  th, td { border: 1px solid var(--border); padding: .55rem .75rem; text-align: left; vertical-align: top; }
+  th { background: var(--panel); }
+  .tip { background: #12261e; border: 1px solid #1f4d38; border-left: 4px solid var(--green); border-radius: 8px; padding: .8rem 1rem; margin: 1rem 0; font-size: .93rem; }
+  .warn { background: #2a1f10; border: 1px solid #59401c; border-left: 4px solid var(--yellow); border-radius: 8px; padding: .8rem 1rem; margin: 1rem 0; font-size: .93rem; }
+  /* comparison cards */
+  .duel { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.2rem 0; }
+  @media (max-width: 720px) { .duel { grid-template-columns: 1fr; } }
+  .card { border-radius: 12px; padding: 1.2rem; }
+  .card.airflow { background: #1a1f2e; border: 1px solid #2d3a5c; }
+  .card.github { background: #14261c; border: 1px solid #1f4d38; }
+  .card h3 { margin-bottom: .6rem; font-size: 1.05rem; }
+  .card.airflow h3 { color: var(--blue); }
+  .card.github h3 { color: var(--green); }
+  .card ul { padding-left: 1.1rem; font-size: .92rem; }
+  .card li { margin-bottom: .35rem; }
+  /* timeline */
+  .timeline { margin: 1.2rem 0; }
+  .t-item { display: flex; gap: 1rem; margin-bottom: .4rem; }
+  .t-time { font-family: monospace; color: var(--yellow); min-width: 120px; font-size: .85rem; padding-top: .15rem; }
+  .t-what { font-size: .93rem; }
+  /* where dbt lives */
+  .homes { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin: 1.2rem 0; }
+  .home { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; }
+  .home b { display: block; margin-bottom: .3rem; }
+  .home small { color: var(--muted); }
+  .home .where { display: block; font-size: .8rem; margin-top: .4rem; color: var(--blue); font-family: monospace; }
+  footer { margin-top: 3rem; color: var(--muted); font-size: .85rem; border-top: 1px solid var(--border); padding-top: 1rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>🧚 Who Runs dbt? — <span>Scheduler vs Tool, Explained Like You're 5</span></h1>
+<p class="sub">You know Airflow: it's a daemon that lives in Docker and breathes 24/7. So where does dbt live? Spoiler: <b>dbt has no daemon. It's a hammer, not a clock.</b></p>
+
+<h2>The 5-year-old story</h2>
+<div class="story"><span class="emoji">⏰</span><b>Airflow is an alarm clock.</b> The clock never sleeps. It sits in your house (a Docker container), ticking every second, and when the alarm rings it <i>wakes someone up</i> to do the chore. The clock + the sleeping worker both live with you, eating electricity all day, even when nothing is happening.</div>
+<div class="story"><span class="emoji">🔨</span><b>dbt is a hammer in a toolbox.</b> It doesn't tick. It doesn't breathe. It just waits, quietly, as a program on a shelf. Nothing happens until <i>somebody picks it up and swings it</i> — <code>dbt build</code>. The moment the job is done, the hammer goes back on the shelf. No house, no electricity, no container needed <i>between</i> jobs.</div>
+<div class="story"><span class="emoji">🤖</span><b>So who swings the hammer every day at 00:00 UTC?</b> In this repo: <b>GitHub Actions</b>. GitHub has a giant room full of computers. At midnight UTC, <i>GitHub's own alarm clock</i> rings, GitHub lends you one computer for ~2 minutes, that computer installs dbt (picks the hammer out of the box), runs <code>dbt build</code>, and then <b>the computer is returned to the shelf</b>. You never saw the machine. You never maintained it. That's why nothing in your repo needs Docker.</div>
+
+<h2>dbt vs Airflow — same job, different philosophy</h2>
+<div class="duel">
+  <div class="card airflow">
+    <h3>🌀 Airflow (what you know)</h3>
+    <ul>
+      <li><b>Always-on daemon</b> — scheduler + webserver + workers run 24/7</li>
+      <li>Lives in <b>your</b> Docker containers / your VM / your k8s cluster</li>
+      <li>You patch it, upgrade it, restart it, pay for it while it idles</li>
+      <li>Schedule is <i>inside</i> the product (<code>schedule="@daily"</code>)</li>
+      <li>Great when: many pipelines, complex dependencies, backfills, sensors, cross-team orchestration</li>
+    </ul>
+  </div>
+  <div class="card github">
+    <h3>⚡ GitHub Actions cron (what this repo uses)</h3>
+    <ul>
+      <li><b>No daemon at all</b> — ephemeral runner born for one job, dies after</li>
+      <li>Lives on <b>GitHub's</b> computers; you rent it per-minute (free for public repos)</li>
+      <li>Zero maintenance — no containers to babysit, ever</li>
+      <li>Schedule is <i>outside</i> the tool, in YAML: <code>cron: '0 0 * * *'</code></li>
+      <li>Great when: 1 repo, a handful of pipelines, schedules are simple</li>
+    </ul>
+  </div>
+</div>
+
+<h2>So… where does dbt actually "live"? (3 honest answers)</h2>
+<p>dbt is just a Python package (<code>pip install dbt-duckdb</code>). It lives wherever someone installs it:</p>
+<div class="homes">
+  <div class="home"><b>1. Your laptop</b><small>this repo's <code>.venv</code></small><span class="where">.venv/Scripts/dbt.exe</span></div>
+  <div class="home"><b>2. A CI runner (2-min life)</b><small>born at 00:00 UTC, deleted at 00:02</small><span class="where">GitHub's ubuntu-latest VM</span></div>
+  <div class="home"><b>3. Inside Airflow (if you want)</b><small>the hammer hangs on Airflow's wall</small><span class="where">CosmosPlugin / BashOperator</span></div>
+</div>
+<div class="tip">💡 <b>Key mental model:</b> dbt has <i>no</i> "dbt server", "dbt scheduler", or "dbt container". Compare: Airflow is the <b>clock + the worker</b>. dbt is <b>only the worker</b>. Every dbt deployment on Earth answers "who triggers it?" with something <i>else</i>: Airflow, Dagster, Prefect, cron on a VM… or GitHub Actions.</div>
+
+<h2>A day in the life of THIS repo (no Docker anywhere)</h2>
+<div class="timeline">
+  <div class="t-item"><div class="t-time">23:59:58 UTC</div><div class="t-what">Your laptop is closed. No container exists. Nothing of yours is running. 🌙</div></div>
+  <div class="t-item"><div class="t-time">00:00:00 UTC</div><div class="t-what">GitHub's scheduler reads <code>pages.yml</code>'s <code>cron: '0 0 * * *'</code> and rings the alarm. 🔔</div></div>
+  <div class="t-item"><div class="t-time">00:00:01</div><div class="t-what">GitHub grabs a free Ubuntu VM and checks out your repo onto it.</div></div>
+  <div class="t-item"><div class="t-time">00:00:05</div><div class="t-what"><code>pip install</code> — the VM builds a fresh toolbox and puts the dbt hammer in it.</div></div>
+  <div class="t-item"><div class="t-time">00:00:30</div><div class="t-what"><code>python ingestion/load_raw.py</code> — Python fetches the 4 APIs into DuckDB. (Hammer not needed yet.)</div></div>
+  <div class="t-item"><div class="t-time">00:01:00</div><div class="t-what"><code>dbt build</code> — the hammer swings: 12 models + 42 tests + snapshot, ~3 seconds. 💥</div></div>
+  <div class="t-item"><div class="t-time">00:01:30</div><div class="t-what"><code>evidence build</code> — static dashboard compiled from the fresh warehouse.</div></div>
+  <div class="t-item"><div class="t-time">00:02:10</div><div class="t-what">Site deployed to GitHub Pages. Manifest + freshness written to the run Summary.</div></div>
+  <div class="t-item"><div class="t-time">00:02:30</div><div class="t-what">The VM is wiped. The hammer evaporates. Your repo still contains no running process. 💤</div></div>
+</div>
+
+<h2>"But Airflow already does this in my other repo — which is right?"</h2>
+<p>Both. They're different points on a cost/complexity curve:</p>
+<table>
+  <tr><th></th><th>GitHub Actions cron (this repo)</th><th>Airflow (your AirflowDAG repo)</th></tr>
+  <tr><td>Infrastructure</td><td>none — GitHub's machines</td><td>your Docker host / VM / k8s, always on</td></tr>
+  <tr><td>Runs when idle</td><td>0 seconds (nothing exists between jobs)</td><td>24/7 (scheduler ticks even with no DAGs)</td></tr>
+  <tr><td>Maintenance burden</td><td>0 — GitHub patches the runners</td><td>you: image upgrades, restarts, monitoring</td></tr>
+  <tr><td>Cost at this scale</td><td>free (public repo)</td><td>real: a server that never sleeps</td></tr>
+  <tr><td>Complex orchestration</td><td>weak (YAML jobs, simple dependencies)</td><td>strong: sensors, backfills, branching, SLAs, 100s of DAGs</td></tr>
+  <tr><td>dbt integration</td><td>plain shell step: <code>dbt build</code></td><td>Cosmos/Astronomer renders your dbt project into a DAG of tasks</td></tr>
+</table>
+<div class="warn">⚠️ <b>When to graduate to Airflow:</b> the day this project has 20+ pipelines, cross-pipeline dependencies ("refresh FX <i>before</i> pricing model"), retry logic spanning days, or consumers waiting on SLAs — that's when a real clock like Airflow earns its Docker container. For one repo + one daily refresh, GitHub's clock is strictly simpler.</div>
+
+<h2>TL;DR</h2>
+<div class="story">dbt <b>never</b> needs a machine of its own — it's a program that runs, finishes, and stops, like any <code>python script.py</code>. What your Airflow brain calls "the scheduler" lives <i>outside</i> dbt. In this repo, GitHub Actions <b>is</b> the scheduler: its cron rings at 00:00 UTC, lends you a throwaway computer for two minutes, that computer installs dbt + Python + Node, does the whole pipeline, deploys the dashboard, and dissolves into nothing. No Docker. No daemon. No machine to babysit. The "system" that runs dbt is just <b>a hammer + someone else's alarm clock</b>. 🔨⏰</div>
+
+<footer>
+  Generated from <b>palm-analytics-dbt</b> · companions: <a style="color:var(--blue)" href="pipeline-explained.html">pipeline-explained.html</a> · <a style="color:var(--blue)" href="cicd-flow-explained.html">cicd-flow-explained.html</a><br>
+  See it yourself: the entire "scheduler" is 3 lines of YAML in <code>.github/workflows/pages.yml</code> — <code>schedule: cron '0 0 * * *'</code>.
+</footer>
+
+</div>
+</body>
+</html>
