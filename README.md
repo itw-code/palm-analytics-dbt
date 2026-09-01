@@ -52,6 +52,27 @@ Ingestion attempts a live fetch and falls back to deterministic synthetic data, 
 
 Verified: `dbt build` → **PASS=56, 0 errors**; Evidence build renders 4 pages with no query errors.
 
+## 🧠 Architectural & Design Decisions
+
+Key engineering trade-offs evaluated during system design:
+
+* **DuckDB over Postgres/Warehouse for local ELT**: Enables zero-infrastructure serverless analytical processing with vectorized columnar execution and seamless MotherDuck cloud scale-up, without container overhead or query latency bottlenecks.
+* **ASOF Joins for Forward-Filling**: Instead of complex window functions or synthetic date cross joins to fill missing weekend commodity prices and exchange rates, DuckDB's native `ASOF` join aligns the most recent historical price to daily operational logs deterministically with `O(N log M)` performance.
+* **SCD Type 2 (`commodity_price_snapshot`)**: Tracks historical revision adjustments in World Bank Pink Sheet price estimates without destructive updates, preserving point-in-time financial auditability.
+* **Model Contracts on Core Marts**: Explicit schema contracts on `fct_commodity_price_daily` guarantee downstream dashboard stability by failing the dbt run before breaking consumer reports in Evidence.dev.
+* **Evidence.dev over traditional BI tools**: Code-driven, SQL-native markdown reporting versioned in git and compiled into static web pages deployed via GitHub Pages—eliminating BI server hosting costs while providing sub-second load times.
+
+## 🛠️ Development & Iteration Methodology
+
+This project was built following modular analytics engineering lifecycle phases:
+1. **Ingestion Layer**: Keyless multi-source Python extractors (`Open-Meteo`, `Frankfurter`, `Nager.Date`, `World Bank`) with deterministic fallback seeds for offline testing.
+2. **Kimball Dimensional Modeling**: Staging (`stg_`) cleaning → Intermediate (`int_`) join/enrichment → Marts (`dim_`, `fct_`) with star schema design.
+3. **Data Quality Rigor**: 56 unit & generic tests (`non_negative`, `accepted_range`, foreign keys, contracts).
+4. **BI & Presentation**: Evidence.dev metrics definitions and static dashboard build.
+5. **CI/CD Automation**: GitHub Actions running automated `dbt build` test suites on pull requests and automated deployments to GitHub Pages.
+
+*(Note: Commit history has been consolidated into milestone releases for clean public showcase distribution).*
+
 ## Quickstart
 ```bash
 python -m venv .venv && . .venv/Scripts/activate   # Windows: .venv\Scripts\activate
