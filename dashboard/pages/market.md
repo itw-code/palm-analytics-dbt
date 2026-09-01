@@ -41,3 +41,27 @@ A negative spread means palm trades at a discount to soybean oil (palm looks att
 ## USD/IDR exchange rate
 
 <LineChart data={market} x=price_date y=usd_idr yAxisTitle="IDR per USD"/>
+
+## Governed metrics (dbt Semantic Layer)
+
+These series are not hand-written SQL - they come from **one canonical definition** in the dbt metric registry (`_marts__semantic.yml`), compiled to the `sl_metrics_daily` view by `semantic/compile_metrics.py`. Dashboard, docs, and any future consumer must agree because there is only one place the math lives.
+
+```sql sl_price
+select metric_time, metric_value as palm_price_idr
+from palm.sl_metrics_daily
+where metric_name = 'avg_palm_price_idr'
+order by metric_time
+```
+
+<LineChart data={sl_price} x=metric_time y=palm_price_idr yAxisTitle="IDR / tonne (governed metric)"/>
+
+```sql sl_share
+select metric_time, region_key, metric_value as harvest_share
+from palm.sl_metrics_daily
+where metric_name = 'effective_harvest_share'
+order by metric_time
+```
+
+<LineChart data={sl_share} x=metric_time series=region_key y=harvest_share yAxisTitle="share of days that are effective harvest days"/>
+
+Pricing, FX, operations value, and the harvest-day share all resolve to the same governed definitions - see the [Methodology](/methodology) for the registry → compiler → view pipeline.

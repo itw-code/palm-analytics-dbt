@@ -49,10 +49,11 @@ Ingestion attempts a live fetch and falls back to deterministic synthetic data, 
 | **model contract** on `fct_commodity_price_daily` | data governance |
 | custom generic test `non_negative` + not_null/unique/relationships/accepted_range | data quality |
 | **dbt unit tests** on ASOF forward-fill & business-rule boundaries | logic testing beyond data shape |
+| **semantic layer**: MetricFlow-spec metric registry YAML → OSS **compiler** → governed `sl_metrics_daily` view | metrics as code, one definition everywhere |
 | **exposures** + `dbt docs` lineage | documentation |
 | GitHub Actions: `dbt build` + Pages deploy | CI/CD |
 
-Verified: `dbt build` → **PASS=59, 0 errors** (incl. 3 dbt unit tests); Evidence build renders 4 pages with no query errors.
+Verified: `dbt build` → **PASS=61, 0 errors** (incl. 3 dbt unit tests + semantic-layer tests); Evidence build renders 4 pages with no query errors.
 
 ## 🧠 Architectural & Design Decisions
 
@@ -81,8 +82,10 @@ This project was built following modular analytics engineering lifecycle phases:
 python -m venv .venv && . .venv/Scripts/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-python ingestion/load_raw.py          # ingest raw data into the DuckLake catalog (palm_lake/)
-dbt deps && dbt build --profiles-dir . # build + test everything (seeds, snapshot, models)
+python ingestion/load_raw.py           # ingest raw data into the DuckLake catalog (palm_lake/)
+dbt deps && dbt parse --profiles-dir . # parse the semantic-layer metric registry
+python semantic/compile_metrics.py     # compile metrics -> sl_metrics_daily model (generated)
+dbt build --profiles-dir .             # build + test everything (seeds, snapshots, models, metrics)
 dbt docs generate --profiles-dir . && dbt docs serve --profiles-dir .  # lineage
 ```
 

@@ -78,6 +78,13 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Event:** \`${{ github.event_name }}\` • **Ref:** \`${{ github.ref }}\`" >> $GITHUB_STEP_SUMMARY
 
+      - name: Compile semantic layer
+        # Renders models/marts/_marts__semantic.yml metric registry into
+        # models/semantic_layer/sl_metrics_daily.sql (GENERATED file).
+        run: |
+          dbt parse --profiles-dir .
+          python semantic/compile_metrics.py
+
       - name: dbt build (run + test every model, incl. seeds & snapshot)
         run: dbt build --profiles-dir .
 

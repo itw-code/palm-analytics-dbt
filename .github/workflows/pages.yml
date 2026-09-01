@@ -46,6 +46,8 @@ jobs:
           else
             python ingestion/load_raw.py
           fi
+          dbt parse --profiles-dir .
+          python semantic/compile_metrics.py
           dbt build --profiles-dir .
           # Advisory freshness — never hide it behind continue-on-error; parse the JSON instead.
           dbt source freshness --profiles-dir . --output target/freshness.json || true
