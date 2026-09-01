@@ -1,0 +1,102 @@
+version: 2
+
+models:
+  - name: int_calendar
+    description: Date spine over the weather window; backbone for daily forward-fills.
+  - name: int_fx_daily
+    description: Business-day FX forward-filled to every calendar day via DuckDB ASOF join.
+  - name: int_commodity_daily
+    description: Monthly palm/soy prices carried forward to daily, with substitution spread.
+  - name: int_daily_agronomy_signals
+    description: Per-region-day agronomy suitability flags (fertilize / harvest / spray).
+
+unit_tests:
+  # ------------------------------------------------------------------ ASOF forward-fill
+  - name: test_int_fx_daily_forward_fills_weekend_gap
+    description: >
+      The ASOF join must carry the LAST business-day rate across calendar gaps
+      (weekends/holidays) - the core correctness promise of int_fx_daily.
+      A generic not_null test cannot catch a broken fill; this can.
+    model: int_fx_daily
+    given:
+      - input: ref('int_calendar')
+        format: sql
+        rows: >
+          select DATE '2026-01-01' as date_day union all
+          select DATE '2026-01-02' union all
+          select DATE '2026-01-03' union all
+          select DATE '2026-01-04' union all
+          select DATE '2026-01-05'
+      - input: ref('stg_fx_rate')
+        format: sql
+        rows: >
+          select DATE '2026-01-01' as rate_date, 16000.0::double as usd_idr union all
+          select DATE '2026-01-02', 16050.0::double union all
+          select DATE '2026-01-05', 16100.0::double
+    expect:
+      rows:
+        - {date_day: '2026-01-01', usd_idr: 16000.0}
+        - {date_day: '2026-01-02', usd_idr: 16050.0}
+        - {date_day: '2026-01-03', usd_idr: 16050.0}
+        - {date_day: '2026-01-04', usd_idr: 16050.0}
+        - {date_day: '2026-01-05', usd_idr: 16100.0}
+
+  - name: test_int_commodity_daily_carries_monthly_price_across_boundary
+    description: >
+      A monthly Pink-Sheet price must apply from its publication month onward,
+      including across the month boundary (31 Dec -> 1 Jan switches series).
+    model: int_commodity_daily
+    given:
+      - input: ref('int_calendar')
+        format: sql
+        rows: >
+          select DATE '2025-12-31' as date_day union all
+          select DATE '2026-01-01' union all
+          select DATE '2026-01-15'
+      - input: ref('stg_commodity_price')
+        format: sql
+        rows: >
+          select DATE '2025-12-01' as price_month, 'palm_oil' as commodity, 900.0::double as usd_per_tonne union all
+          select DATE '2025-12-01', 'soybean_oil', 1000.0::double union all
+          select DATE '2026-01-01', 'palm_oil', 950.0::double union all
+          select DATE '2026-01-01', 'soybean_oil', 1040.0::double
+    expect:
+      rows:
+        - {date_day: '2025-12-31', palm_usd: 900.0,  soy_usd: 1000.0, palm_soy_spread_usd: -100.0}
+        - {date_day: '2026-01-01', palm_usd: 950.0,  soy_usd: 1040.0, palm_soy_spread_usd: -90.0}
+        - {date_day: '2026-01-15', palm_usd: 950.0,  soy_usd: 1040.0, palm_soy_spread_usd: -90.0}
+
+  # ------------------------------------------------------------------ agronomy rules
+  - name: test_int_daily_agronomy_signals_rule_boundaries
+    description: >
+      Locks each business-rule threshold independently so a rule edit cannot
+      ship silently: spray fails ONLY because wind is EXACTLY 12 (rule <12) with
+      rain favorable; fertilize fails ONLY because soil is EXACTLY 0.35 (rule
+      <0.35) with rain favorable; harvest fails ONLY because humidity is 90
+      (rule <88) with wind favorable. Every non-boundary column of a row is set
+      so exactly one rule decides the flag.
+    model: int_daily_agronomy_signals
+    given:
+      - input: ref('stg_weather')
+        format: sql
+        rows: >
+          select 'riau' as region, DATE '2026-01-01' as weather_date,
+                 28.0::double as temp_mean_c, 4.0::double as precip_mm,
+                 12.0::double as wind_max_kmh, 4.0::double as et0_mm,
+                 85.0::double as humidity_pct, 0.30::double as soil_moisture union all
+          select 'riau', DATE '2026-01-02', 28.0::double, 6.0::double,
+                 8.0::double, 4.0::double, 85.0::double, 0.35::double union all
+          select 'riau', DATE '2026-01-03', 28.0::double, 4.0::double,
+                 8.0::double, 3.0::double, 90.0::double, 0.30::double union all
+          select 'riau', DATE '2026-01-04', 28.0::double, 6.0::double,
+                 20.0::double, 4.0::double, 95.0::double, 0.30::double
+    expect:
+      rows:
+        # wind boundary: spray FALSE solely due to wind=12 (rain 4<5 is favorable)
+        - {region: riau, weather_date: '2026-01-01', water_deficit_mm: 0.0,  is_fertilize_favorable: false, is_harvest_favorable: true,  is_spray_favorable: false}
+        # soil boundary: fert FALSE solely due to soil=0.35 (precip 6 in 5..25 is favorable)
+        - {region: riau, weather_date: '2026-01-02', water_deficit_mm: -2.0, is_fertilize_favorable: false, is_harvest_favorable: true,  is_spray_favorable: false}
+        # humidity boundary: harvest FALSE solely due to hum=90 (precip 4<10 favorable)
+        - {region: riau, weather_date: '2026-01-03', water_deficit_mm: -1.0, is_fertilize_favorable: false, is_harvest_favorable: false, is_spray_favorable: true}
+        # positive control: precip 6 + soil 0.30 -> fert TRUE; harvest/spray blocked by hum/precip/wind
+        - {region: riau, weather_date: '2026-01-04', water_deficit_mm: -2.0, is_fertilize_favorable: true,  is_harvest_favorable: false, is_spray_favorable: false}
