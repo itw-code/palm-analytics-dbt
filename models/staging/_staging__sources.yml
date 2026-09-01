@@ -9,7 +9,12 @@ sources:
         description: Daily weather per estate region (Open-Meteo Archive).
         loaded_at_field: "cast(obs_date as timestamp)"
         freshness:
-          warn_after: {count: 45, period: day}
+          # Tight warn (3d) so a missed daily cron is visible immediately; error at
+          # 90d keeps CI with the deterministic 2026-06-30 fixture from failing
+          # while still catching true staleness in production (use PALM_USE_LIVE_DATE=1).
+          warn_after: {count: 3, period: day}
+          error_after: {count: 90, period: day}
+          filter: "obs_date is not null"
         columns:
           - name: region
             tests: [not_null]
@@ -20,7 +25,9 @@ sources:
         description: USD->IDR daily reference rate (Frankfurter / ECB, business days).
         loaded_at_field: "cast(rate_date as timestamp)"
         freshness:
-          warn_after: {count: 45, period: day}
+          warn_after: {count: 3, period: day}
+          error_after: {count: 90, period: day}
+          filter: "rate_date is not null"
         columns:
           - name: rate_date
             tests: [not_null, unique]
@@ -35,9 +42,14 @@ sources:
 
       - name: raw_commodity_price
         description: Monthly palm-oil & soybean-oil prices, USD/tonne (World Bank Pink Sheet).
+        # Monthly cadence: warn if > 35 days without a new monthly price, error at 95
+        # (95 keeps the deterministic 2026-06-01 fixture from erroring in Sep 2026
+        # while still catching a truly missed monthly refresh in production).
         loaded_at_field: "cast(price_month as timestamp)"
         freshness:
-          warn_after: {count: 90, period: day}
+          warn_after: {count: 35, period: day}
+          error_after: {count: 95, period: day}
+          filter: "price_month is not null"
         columns:
           - name: price_month
             tests: [not_null]

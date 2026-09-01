@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Palm Analytics — CI/CD & Automation Flow</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --border: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --green: #3fb950; --blue: #58a6ff; --orange: #f0883e; --red: #f85149; --yellow: #d29922; --purple: #bc8cff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Segoe UI", system-ui, sans-serif; line-height: 1.65; padding: 2rem; }
+  .wrap { max-width: 1000px; margin: 0 auto; }
+  h1 { font-size: 1.9rem; margin-bottom: .3rem; }
+  h1 span { color: var(--green); }
+  .sub { color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 2.2rem 0 .8rem; padding-bottom: .3rem; border-bottom: 1px solid var(--border); }
+  p { margin-bottom: .8rem; }
+  /* flow chart */
+  .flow { display: flex; flex-direction: column; gap: 0; margin: 1.5rem 0; }
+  .frow { display: flex; gap: .7rem; align-items: stretch; flex-wrap: wrap; }
+  .fbox { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: .7rem .9rem; flex: 1 1 150px; min-width: 150px; }
+  .fbox b { display: block; font-size: .9rem; }
+  .fbox small { color: var(--muted); font-size: .78rem; }
+  .fbox.ok { border-top: 3px solid var(--green); }
+  .fbox.warn2 { border-top: 3px solid var(--yellow); }
+  .fbox.err { border-top: 3px solid var(--red); }
+  .farrow { text-align: center; color: var(--muted); padding: .2rem 0; font-size: 1.1rem; }
+  .lane-label { font-family: monospace; color: var(--blue); font-size: .85rem; margin: .8rem 0 .3rem; }
+  code { background: #21262d; padding: .12rem .4rem; border-radius: 5px; font-family: Consolas, monospace; font-size: .88em; color: #ffa657; }
+  pre { background: #161b22; border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.2rem; overflow-x: auto; margin: .8rem 0 1.4rem; font-size: .85rem; line-height: 1.55; }
+  pre code { background: none; padding: 0; color: var(--text); }
+  .cm { color: #8b949e; } .kw { color: #ff7b72; } .str { color: #a5d6ff; } .fn { color: #d2a8ff; }
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .92rem; }
+  th, td { border: 1px solid var(--border); padding: .55rem .75rem; text-align: left; vertical-align: top; }
+  th { background: var(--panel); }
+  .tip { background: #12261e; border: 1px solid #1f4d38; border-left: 4px solid var(--green); border-radius: 8px; padding: .8rem 1rem; margin: 1rem 0; font-size: .93rem; }
+  .warn { background: #2a1f10; border: 1px solid #59401c; border-left: 4px solid var(--yellow); border-radius: 8px; padding: .8rem 1rem; margin: 1rem 0; font-size: .93rem; }
+  .bad { background: #2d1214; border: 1px solid #6b2226; border-left: 4px solid var(--red); border-radius: 8px; padding: .8rem 1rem; margin: 1rem 0; font-size: .93rem; }
+  .vs { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0; }
+  @media (max-width: 700px) { .vs { grid-template-columns: 1fr; } }
+  .vs > div { border-radius: 10px; padding: 1rem; font-size: .9rem; }
+  .vs .before { background: #2d1214; border: 1px solid #6b2226; }
+  .vs .after { background: #12261e; border: 1px solid #1f4d38; }
+  .vs h3 { font-size: .95rem; margin-bottom: .5rem; }
+  .vs .before h3 { color: var(--red); } .vs .after h3 { color: var(--green); }
+  .vs ul { padding-left: 1.1rem; }
+  .vs li { margin-bottom: .3rem; }
+  footer { margin-top: 3rem; color: var(--muted); font-size: .85rem; border-top: 1px solid var(--border); padding-top: 1rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>⚙️ Palm Analytics — <span>CI/CD &amp; Daily Automation Flow</span></h1>
+<p class="sub">What happens on every push, every pull request, and every day at 00:00 UTC — and why each guardrail exists.</p>
+
+<h2>The three triggers</h2>
+<table>
+  <tr><th>Trigger</th><th><code>dbt.yml</code></th><th><code>pages.yml</code></th><th>Why it exists</th></tr>
+  <tr><td><code>push → main</code></td><td>✅ build + test</td><td>✅ build + <b>deploy</b></td><td>merged code must work and ship</td></tr>
+  <tr><td><code>pull_request</code></td><td>✅ build + test</td><td>—</td><td>catch breakage <i>before</i> merge</td></tr>
+  <tr><td><code>schedule: 0 0 * * *</code></td><td>✅</td><td>✅ full E2E + deploy</td><td>fresh data daily, no human needed</td></tr>
+  <tr><td><code>workflow_dispatch</code></td><td>✅</td><td>✅</td><td>rerun on demand ("Run workflow" button)</td></tr>
+</table>
+
+<h2>The scheduled E2E run (pages.yml), step by step</h2>
+<div class="flow">
+  <div class="lane-label">job: build (ubuntu runner)</div>
+  <div class="frow"><div class="fbox"><b>checkout</b><small>grab repo at latest main</small></div></div>
+  <div class="farrow">↓</div>
+  <div class="frow"><div class="fbox"><b>setup-python + pip cache</b><small>Python 3.12</small></div></div>
+  <div class="farrow">↓</div>
+  <div class="frow">
+    <div class="fbox"><b>dbt deps</b><small>install dbt_utils package</small></div>
+    <div class="fbox"><b>load_raw.py</b><small>4 APIs → raw tables + manifest</small></div>
+    <div class="fbox"><b>dbt build</b><small>12 models + 42 tests + snapshot</small></div>
+  </div>
+  <div class="farrow">↓</div>
+  <div class="frow">
+    <div class="fbox warn2"><b>source freshness</b><small>warn → annotation · error → fail</small></div>
+    <div class="fbox"><b>cp palm.duckdb</b><small>warehouse → Evidence source</small></div>
+  </div>
+  <div class="farrow">↓</div>
+  <div class="frow">
+    <div class="fbox"><b>setup-node + npm cache</b><small>Node 20</small></div>
+    <div class="fbox"><b>npm run sources</b><small>pre-execute all dashboard SQL</small></div>
+    <div class="fbox"><b>npm run build</b><small>static site → dashboard/build</small></div>
+  </div>
+  <div class="farrow">↓</div>
+  <div class="frow"><div class="fbox ok"><b>upload-pages-artifact</b><small>zip the static site</small></div></div>
+  <div class="lane-label">job: deploy</div>
+  <div class="frow"><div class="fbox ok"><b>deploy-pages</b><small>→ https://itw-code.github.io/palm-analytics-dbt/</small></div></div>
+  <div class="lane-label">job: notify (only on failure &amp; only on schedule)</div>
+  <div class="frow"><div class="fbox err"><b>github-script</b><small>auto-open GitHub Issue (deduped) with run links</small></div></div>
+</div>
+
+<h2>Guardrail 1 — no deploy races with manual pushes</h2>
+<p>Two runs of <code>pages.yml</code> touching GitHub Pages at the same time would corrupt the deploy. The fix is a <b>concurrency group</b>:</p>
+<pre><code><span class="kw">concurrency</span>:
+  <span class="kw">group</span>: pages
+  <span class="kw">cancel-in-progress</span>: <span class="kw">false</span>   <span class="cm"># ← the important line</span></code></pre>
+<div class="vs">
+  <div class="before"><h3>❌ Before (cancel-in-progress: true)</h3>
+    <ul><li>You push at 00:00:01 while the cron runs</li><li>Cron gets <b>killed mid-deploy</b></li><li>Pages can be left half-updated</li></ul></div>
+  <div class="after"><h3>✅ After (false)</h3>
+    <ul><li>Manual run finishes first</li><li>Cron <b>queues</b>, runs immediately after</li><li>Worst case: dashboard is a few minutes "late"</li></ul></div>
+</div>
+<p><code>dbt.yml</code> uses <code>group: dbt-ci-${{ '{' }}{{ 'github.ref' }}{{ '}' }}</code> instead — so <code>main</code> and PR branches never block each other, but the same branch can't run twice in parallel.</p>
+
+<h2>Guardrail 2 — ingestion failures are never silent</h2>
+<p>The tricky part of "always-reproducible CI" is that synthetic fallback can mask a dead API with a green ✅. The design response: <b>graceful by default, loud by design</b>.</p>
+<div class="flow">
+  <div class="frow">
+    <div class="fbox ok"><b>API up</b><small>mode: "live"<br>rows counted</small></div>
+    <div class="fbox warn2"><b>API down → retry 3×</b><small>2s/4s/6s backoff</small></div>
+    <div class="fbox warn2"><b>still down → synthetic</b><small>manifest records mode+error</small></div>
+    <div class="fbox err"><b>--require-live</b><small>or INGEST_REQUIRE_LIVE=1<br>→ exit 1, run fails</small></div>
+  </div>
+</div>
+<pre><code><span class="cm"># workflow logic — scheduled runs can opt into strict mode via a repo variable</span>
+<span class="kw">if</span> [ <span class="str">"${{ github.event_name }}"</span> = <span class="str">"schedule"</span> ] &amp;&amp; [ <span class="str">"${INGEST_REQUIRE_LIVE:-0}"</span> = <span class="str">"1"</span> ]; <span class="kw">then</span>
+  python ingestion/load_raw.py <span class="fn">--require-live</span>
+<span class="kw">else</span>
+  python ingestion/load_raw.py          <span class="cm"># fallback allowed, but LOUD</span>
+<span class="kw">fi</span></code></pre>
+<div class="tip">💡 <b>Default is graceful on purpose:</b> a 5-minute Frankfurter hiccup shouldn't leave the dashboard frozen for 24h until the next cron. The manifest + summary warning means you'll <i>know</i> — and can flip the variable to fail-fast once you trust the pipeline.</div>
+
+<h2>Guardrail 3 — freshness that fails the right way</h2>
+<p>The old workflow had <code>continue-on-error: true</code> on freshness — i.e. it could <b>never</b> fail. Now:</p>
+<pre><code>dbt source freshness <span class="fn">--output</span> target/freshness.json || <span class="kw">true</span>
+<span class="cm"># then parse:  status "warn"  → ::warning:: annotation, run stays green</span>
+<span class="cm">#             status "error" → ::error:: + exit 1 → run goes red</span></code></pre>
+<table>
+  <tr><th>Source</th><th>warn</th><th>error</th><th>Rationale</th></tr>
+  <tr><td><code>raw_weather</code> / <code>raw_fx_rate</code></td><td>3 days</td><td>90 days</td><td>missed daily cron visible next morning; error threshold wide enough that the deterministic CI fixture doesn't false-alarm</td></tr>
+  <tr><td><code>raw_commodity_price</code></td><td>35 days</td><td>95 days</td><td>monthly cadence — warn if a month's price didn't arrive</td></tr>
+</table>
+
+<h2>Guardrail 4 — you hear about failures</h2>
+<ul style="padding-left:1.2rem; margin-bottom:1rem;">
+  <li><b>Workflow Summary</b> — every run writes the ingestion manifest + freshness table to the run's Summary tab (visible without opening logs).</li>
+  <li><b>Auto-Issue on scheduled failure</b> — opens <code>Scheduled dbt build failed — YYYY-MM-DD</code>; if one is already open, it <i>comments</i> instead of spamming duplicates. Needs <code>permissions: issues: write</code>.</li>
+  <li><b>Artifacts on failure</b> — <code>run_results.json</code>, <code>freshness.json</code>, <code>ingestion_manifest.json</code>, <code>logs/dbt.log</code> (14-day retention).</li>
+</ul>
+
+<h2>Speed: caches &amp; timeouts</h2>
+<pre><code><span class="cm"># actions/setup-python@v5</span>
+<span class="kw">cache</span>: pip                    <span class="cm"># requirements.txt → cached wheels</span>
+
+<span class="cm"># actions/setup-node@v4</span>
+<span class="kw">cache</span>: npm
+<span class="kw">cache-dependency-path</span>: dashboard/package-lock.json
+
+<span class="kw">timeout-minutes</span>: 25           <span class="cm"># hung runner can't burn your CI minutes</span></code></pre>
+<p>Also note <code>npm ci</code> (not <code>npm install</code>) — uses the lockfile exactly, faster and reproducible.</p>
+
+<h2>Your 10-minute mental model</h2>
+<div class="tip">
+<b>Push →</b> PR check (<code>dbt.yml</code>) proves the models/tests pass.<br>
+<b>Merge →</b> <code>pages.yml</code> rebuilds warehouse + site and ships it.<br>
+<b>Every midnight UTC →</b> same thing, plus: fresh APIs, freshness gates, manifest in Summary, auto-issue if red.<br>
+<b>Nothing to babysit</b> — open the Actions tab when the dashboard's own staleness banner tells you to.
+</div>
+
+<footer>
+  Generated from <b>palm-analytics-dbt</b> · see <code>.github/workflows/dbt.yml</code> and <code>.github/workflows/pages.yml</code> for the real YAML · companion guide: <a style="color:var(--blue)" href="pipeline-explained.html">pipeline-explained.html</a>
+</footer>
+
+</div>
+</body>
+</html>

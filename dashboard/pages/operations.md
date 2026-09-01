@@ -4,6 +4,14 @@ title: Operations Planner
 
 Per-region daily operating guidance. An **effective harvest day** is a harvest-favorable day that is not a weekend or an Indonesian public holiday (labour is available).
 
+```sql ops_freshness
+select max(operation_date) as as_of, datediff('day', max(operation_date), current_date) as days_stale from palm.operations_daily
+```
+
+{#if ops_freshness[0].days_stale > 3}
+<Alert status="warning">Data is <Value data={ops_freshness} column=days_stale/> days stale (last refresh <Value data={ops_freshness} column=as_of fmt="yyyy-mm-dd"/>). Treat recommendations with caution.</Alert>
+{/if}
+
 ```sql regions_list
 select region_key, region_name from palm.region order by region_name
 ```
@@ -39,21 +47,27 @@ from palm.operations_daily
 where region_key like '${inputs.region.value}'
 ```
 
-<BigValue data={planner_summary} value=effective_harvest_days title="Effective harvest days"/>
-<BigValue data={planner_summary} value=spray_days title="Spray days"/>
-<BigValue data={planner_summary} value=fertilize_days title="Fertilize days"/>
+<Grid cols=3>
+  <BigValue data={planner_summary} value=effective_harvest_days title="Effective harvest days"/>
+  <BigValue data={planner_summary} value=spray_days title="Spray days"/>
+  <BigValue data={planner_summary} value=fertilize_days title="Fertilize days"/>
+</Grid>
+
+*Showing dates through <Value data={ops_freshness} column=as_of fmt="yyyy-mm-dd"/> — filter by region above.*
 
 ## Daily recommendations
 
-<DataTable data={planner} rows=15>
+<DataTable data={planner} rows=20 search sortable>
     <Column id=operation_date title="Date"/>
     <Column id=region_name title="Region"/>
     <Column id=precip_mm title="Precip (mm)"/>
     <Column id=humidity_pct title="Humidity (%)"/>
-    <Column id=harvest contentType=colorindicator/>
-    <Column id=spray contentType=colorindicator/>
-    <Column id=fertilize contentType=colorindicator/>
-    <Column id=effective_harvest contentType=colorindicator/>
+    <Column id=water_deficit_mm title="Deficit (mm)"/>
+    <Column id=cpo_idr_per_tonne title="CPO (IDR/t)" fmt="#,##0"/>
+    <Column id=harvest title="Harvest" contentType=colorindicator/>
+    <Column id=spray title="Spray" contentType=colorindicator/>
+    <Column id=fertilize title="Fertilize" contentType=colorindicator/>
+    <Column id=effective_harvest title="Effective" contentType=colorindicator/>
 </DataTable>
 
 ## Water deficit (ET0 − precipitation) over time

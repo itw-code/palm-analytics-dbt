@@ -17,9 +17,22 @@ clean-targets:
 
 models:
   palm_analytics:
+    +persist_docs:
+      relation: true
+      columns: true
     staging:
       +materialized: view
     intermediate:
       +materialized: view
     marts:
       +materialized: table
+      # Incremental fact is the only large growing table; keep it table + incremental config per model.
+      fct_estate_operations_daily:
+        +incremental_strategy: delete+insert
+        +on_schema_change: sync_all_columns
+
+seeds:
+  palm_analytics:
+    +column_types:
+      planted_hectares: double
+      yield_t_ha: double

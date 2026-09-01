@@ -6,8 +6,12 @@ Heterogeneous free sources (all keyless):
   - Nager.Date              -> Indonesia public holidays
   - World Bank Pink Sheet    -> palm oil + soybean oil monthly prices (best-effort xlsx; synthetic fallback)
 
-Every source attempts a live fetch and falls back to DETERMINISTIC synthetic data when
-offline, so `dbt build` and CI are always reproducible. Pass --live-only to disable fallback.
+Every source attempts a live fetch with retries and falls back to DETERMINISTIC
+synthetic data when offline, so `dbt build` and CI are always reproducible.
+Pass --live-only / --require-live to disable fallback (recommended for scheduled
+production runs). When synthetic fallback is used, a machine-readable manifest
+(ingestion_manifest.json) is written and a prominent WARNING is emitted so the
+degradation is never silent.
 
 Writes raw tables: raw_weather, raw_fx_rate, raw_holidays, raw_commodity_price
 """
@@ -15,13 +19,17 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import json
 import math
+import os
 import sys
+import time
 
 import duckdb
 import requests
 
 DB_PATH = "palm.duckdb"
+MANIFEST_DEFAULT = "ingestion_manifest.json"
 
 REGIONS = {
     "riau":                (0.51, 101.45),
@@ -29,16 +37,50 @@ REGIONS = {
     "central_kalimantan": (-1.68, 113.38),
 }
 
-END_DATE = dt.date(2026, 6, 30)   # fixed -> deterministic (no wall-clock drift)
+# Fixed end-date keeps CI fully deterministic. Override with PALM_END_DATE=YYYY-MM-DD
+# or --end-date for a live scheduled run (e.g. yesterday).
+DEFAULT_END_DATE = dt.date(2026, 6, 30)
 WINDOW_DAYS = 120
 
 
-def date_range(days: int) -> list[dt.date]:
-    return [END_DATE - dt.timedelta(days=i) for i in range(days - 1, -1, -1)]
+def resolve_end_date(cli_end_date: str | None) -> dt.date:
+    if cli_end_date:
+        return dt.date.fromisoformat(cli_end_date)
+    env = os.getenv("PALM_END_DATE")
+    if env:
+        return dt.date.fromisoformat(env)
+    # When running on a schedule in production you want fresh data up to yesterday.
+    # Set PALM_USE_LIVE_DATE=1 in the scheduled workflow to opt in.
+    if os.getenv("PALM_USE_LIVE_DATE") == "1":
+        return dt.date.today() - dt.timedelta(days=1)
+    return DEFAULT_END_DATE
+
+
+def date_range(days: int, end_date: dt.date) -> list[dt.date]:
+    return [end_date - dt.timedelta(days=i) for i in range(days - 1, -1, -1)]
 
 
 def region_hash(region: str) -> float:
     return (sum(ord(c) for c in region) % 10) / 10.0
+
+
+# --------------------------------------------------------------------------- retry helper
+def fetch_with_retry(fn, *, retries: int = 3, backoff: float = 2.0, label: str = ""):
+    """Call fn() up to retries times with exponential backoff. Re-raises last error."""
+    last_exc: Exception | None = None
+    for attempt in range(1, retries + 1):
+        try:
+            return fn()
+        except Exception as e:
+            last_exc = e
+            if attempt == retries:
+                break
+            sleep_s = backoff * attempt
+            print(f"[{label}] attempt {attempt}/{retries} failed ({e.__class__.__name__}: {e}) — retrying in {sleep_s:.0f}s",
+                  file=sys.stderr)
+            time.sleep(sleep_s)
+    assert last_exc is not None
+    raise last_exc
 
 
 # --------------------------------------------------------------------------- weather
@@ -67,6 +109,8 @@ def fetch_weather_live(region, lat, lon, dates) -> list[dict]:
             "temp_mean_c": temp[i], "precip_mm": precip[i], "wind_max_kmh": wind[i],
             "et0_mm": et0[i], "humidity_pct": hum[i], "soil_moisture": soil[i],
         })
+    if not rows:
+        raise ValueError("Open-Meteo returned 0 rows")
     return rows
 
 
@@ -95,7 +139,10 @@ def fetch_fx_live(dates) -> list[dict]:
     r = requests.get(url, timeout=25)
     r.raise_for_status()
     rates = r.json()["rates"]  # business-day series -> forward-filled in dbt
-    return [{"rate_date": d, "usd_idr": v["IDR"]} for d, v in sorted(rates.items())]
+    rows = [{"rate_date": d, "usd_idr": v["IDR"]} for d, v in sorted(rates.items())]
+    if not rows:
+        raise ValueError("Frankfurter returned 0 rows")
+    return rows
 
 
 def synth_fx(dates) -> list[dict]:
@@ -116,6 +163,8 @@ def fetch_holidays_live(years) -> list[dict]:
         r.raise_for_status()
         for h in r.json():
             rows.append({"holiday_date": h["date"], "holiday_name": h.get("name", "")})
+    if not rows:
+        raise ValueError("Nager.Date returned 0 rows")
     return rows
 
 
@@ -173,47 +222,101 @@ def month_starts(dates) -> list[dt.date]:
 # --------------------------------------------------------------------------- main
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--live-only", action="store_true")
+    ap.add_argument("--live-only", action="store_true", help="Fail instead of using synthetic fallback (alias for --require-live)")
+    ap.add_argument("--require-live", action="store_true", help="Fail if any source must fall back to synthetic")
+    ap.add_argument("--allow-synthetic", action="store_true", default=True, help="Allow synthetic fallback (default: true, disable with --require-live)")
+    ap.add_argument("--manifest", default=MANIFEST_DEFAULT, help="Path to write ingestion manifest JSON")
+    ap.add_argument("--end-date", default=None, help="Override end date (YYYY-MM-DD); default 2026-06-30 or PALM_END_DATE / PALM_USE_LIVE_DATE")
+    ap.add_argument("--window-days", type=int, default=WINDOW_DAYS, help="Number of days to ingest")
     args = ap.parse_args()
 
-    dates = date_range(WINDOW_DAYS)
+    require_live = args.live_only or args.require_live
+    # --require-live takes precedence over --allow-synthetic
+    allow_synthetic = not require_live
+
+    end_date = resolve_end_date(args.end_date)
+    dates = date_range(args.window_days, end_date)
     years = sorted({d.year for d in dates})
     months = month_starts(dates)
+
+    provenance: dict = {
+        "generated_at": dt.datetime.utcnow().isoformat() + "Z",
+        "end_date": end_date.isoformat(),
+        "window_days": args.window_days,
+        "require_live": require_live,
+        "sources": {},
+    }
+    synth_count = 0
 
     # weather
     weather = []
     for offset, (region, (lat, lon)) in enumerate(REGIONS.items()):
         try:
-            weather += fetch_weather_live(region, lat, lon, dates); print(f"[weather] live OK: {region}")
+            rows = fetch_with_retry(lambda r=region, la=lat, lo=lon: fetch_weather_live(r, la, lo, dates),
+                                    label=f"weather:{region}")
+            weather += rows
+            print(f"[weather] live OK: {region} ({len(rows)} rows)")
+            provenance["sources"].setdefault("weather", {})[region] = {"mode": "live", "rows": len(rows)}
         except Exception as e:
-            if args.live_only:
-                print(f"[weather] live FAILED {region}: {e}", file=sys.stderr); return 1
-            weather += synth_weather(region, offset, dates); print(f"[weather] synthetic: {region} ({e.__class__.__name__})")
+            if not allow_synthetic:
+                print(f"[weather] live FAILED {region}: {e}", file=sys.stderr)
+                provenance["sources"].setdefault("weather", {})[region] = {"mode": "failed", "error": f"{e.__class__.__name__}: {e}"}
+                _write_manifest(args.manifest, provenance, synth_count, status="failed")
+                return 1
+            rows = synth_weather(region, offset, dates)
+            weather += rows
+            synth_count += 1
+            print(f"[weather] synthetic fallback: {region} ({e.__class__.__name__}: {e})", file=sys.stderr)
+            provenance["sources"].setdefault("weather", {})[region] = {"mode": "synthetic", "rows": len(rows), "error": f"{e.__class__.__name__}: {e}"}
 
     # fx
     try:
-        fx = fetch_fx_live(dates); print(f"[fx] live OK ({len(fx)} rows)")
+        fx = fetch_with_retry(lambda: fetch_fx_live(dates), label="fx")
+        print(f"[fx] live OK ({len(fx)} rows)")
+        provenance["sources"]["fx"] = {"mode": "live", "rows": len(fx)}
     except Exception as e:
-        if args.live_only:
-            print(f"[fx] live FAILED: {e}", file=sys.stderr); return 1
-        fx = synth_fx(dates); print(f"[fx] synthetic ({e.__class__.__name__})")
+        if not allow_synthetic:
+            print(f"[fx] live FAILED: {e}", file=sys.stderr)
+            provenance["sources"]["fx"] = {"mode": "failed", "error": f"{e.__class__.__name__}: {e}"}
+            _write_manifest(args.manifest, provenance, synth_count, status="failed")
+            return 1
+        fx = synth_fx(dates)
+        synth_count += 1
+        print(f"[fx] synthetic fallback ({e.__class__.__name__}: {e})", file=sys.stderr)
+        provenance["sources"]["fx"] = {"mode": "synthetic", "rows": len(fx), "error": f"{e.__class__.__name__}: {e}"}
 
     # holidays
     try:
-        holidays = fetch_holidays_live(years); print(f"[holidays] live OK ({len(holidays)} rows)")
+        holidays = fetch_with_retry(lambda: fetch_holidays_live(years), label="holidays")
+        print(f"[holidays] live OK ({len(holidays)} rows)")
+        provenance["sources"]["holidays"] = {"mode": "live", "rows": len(holidays)}
     except Exception as e:
-        if args.live_only:
-            print(f"[holidays] live FAILED: {e}", file=sys.stderr); return 1
-        holidays = synth_holidays(years); print(f"[holidays] synthetic ({e.__class__.__name__})")
+        if not allow_synthetic:
+            print(f"[holidays] live FAILED: {e}", file=sys.stderr)
+            provenance["sources"]["holidays"] = {"mode": "failed", "error": f"{e.__class__.__name__}: {e}"}
+            _write_manifest(args.manifest, provenance, synth_count, status="failed")
+            return 1
+        holidays = synth_holidays(years)
+        synth_count += 1
+        print(f"[holidays] synthetic fallback ({e.__class__.__name__}: {e})", file=sys.stderr)
+        provenance["sources"]["holidays"] = {"mode": "synthetic", "rows": len(holidays), "error": f"{e.__class__.__name__}: {e}"}
 
     # commodity
     commodity = fetch_commodity_live(months)
     if commodity is None:
-        if args.live_only:
-            print("[commodity] live source not wired and --live-only set", file=sys.stderr); return 1
-        commodity = synth_commodity(months); print(f"[commodity] synthetic ({len(commodity)} rows)")
+        if require_live:
+            print("[commodity] live source not wired (parser stub) and --require-live set", file=sys.stderr)
+            provenance["sources"]["commodity"] = {"mode": "failed", "error": "parser not wired - World Bank xlsx parsing stub returns None"}
+            _write_manifest(args.manifest, provenance, synth_count, status="failed")
+            return 1
+        commodity = synth_commodity(months)
+        synth_count += 1
+        # Distinguish known stub limitation from transient API failure
+        print("[commodity] synthetic (World Bank parser stub - known limitation; synthetic series used)", file=sys.stderr)
+        provenance["sources"]["commodity"] = {"mode": "synthetic", "rows": len(commodity), "error": "parser not wired - synthetic fallback (known limitation)"}
     else:
         print(f"[commodity] live OK ({len(commodity)} rows)")
+        provenance["sources"]["commodity"] = {"mode": "live", "rows": len(commodity)}
 
     con = duckdb.connect(DB_PATH)
     con.execute("""CREATE OR REPLACE TABLE raw_weather (
@@ -237,7 +340,32 @@ def main() -> int:
               for t in ("raw_weather", "raw_fx_rate", "raw_holidays", "raw_commodity_price")}
     con.close()
     print(f"[duckdb] {counts} -> {DB_PATH}")
+
+    status = "synthetic_fallback" if synth_count > 0 else "live"
+    _write_manifest(args.manifest, provenance, synth_count, status=status, counts=counts)
+
+    if synth_count > 0:
+        # Never silent: emit a banner that survives in logs and is detectable by CI.
+        print(f"\n::warning::[ingestion] {synth_count} source(s) used SYNTHETIC fallback - see {args.manifest} for provenance. "
+              "In production (scheduled runs) this should be investigated; pass --require-live to fail-fast.", file=sys.stderr)
+        # Also surface commodity stub note
+        if provenance["sources"].get("commodity", {}).get("mode") == "synthetic":
+            print("::notice::[ingestion] commodity price is ALWAYS synthetic until World Bank parser is wired (known limitation).", file=sys.stderr)
+
     return 0
+
+
+def _write_manifest(path: str, provenance: dict, synth_count: int, status: str = "live", counts: dict | None = None):
+    provenance["synthetic_sources"] = synth_count
+    provenance["status"] = status
+    if counts:
+        provenance["row_counts"] = counts
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(provenance, f, indent=2)
+        print(f"[manifest] wrote {path} (status={status}, synthetic={synth_count})")
+    except Exception as e:
+        print(f"[manifest] FAILED to write {path}: {e}", file=sys.stderr)
 
 
 if __name__ == "__main__":

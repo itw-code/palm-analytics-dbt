@@ -17,3 +17,13 @@ __pycache__/
 .env
 *.token
 profiles.local.yml
+
+# local session handoff (contains private career/security context — do not publish)
+HANDOFF.md
+
+# agent-skills install (restore with: npx skills experimental_install) — content not committed
+.agents/
+.claude/skills/
+
+# ingestion provenance (generated per run; uploaded as artifact)
+ingestion_manifest.json

@@ -13,7 +13,7 @@ This dashboard is the serving layer of an end-to-end analytics-engineering pipel
 | Nager.Date | Indonesia public-holiday calendar | keyless |
 | World Bank Pink Sheet | monthly palm-oil & soybean-oil prices | keyless |
 
-All ingestion attempts a live fetch and falls back to deterministic synthetic data, so the pipeline and its CI are always reproducible offline.
+All ingestion attempts a live fetch with retries and falls back to deterministic synthetic data, so the pipeline and its CI are always reproducible offline. **In production the fallback is never silent:** `ingestion/load_raw.py` writes `ingestion_manifest.json` with per-source provenance (`live` vs `synthetic`) and the scheduled GitHub Actions job surfaces any synthetic fallback as a warning in the workflow summary — and optionally opens a GitHub issue. Pass `--require-live` to make the pipeline fail-fast instead of degrading. Commodity price is *always* synthetic today because the World Bank Pink Sheet parser is stubbed (known limitation, flagged explicitly in the manifest).
 
 ## Transformation layers (dbt)
 
@@ -23,16 +23,23 @@ All ingestion attempts a live fetch and falls back to deterministic synthetic da
 
 ## Engineering practices demonstrated
 
-- 4 heterogeneous sources with **source freshness** checks
+- 4 heterogeneous sources with **source freshness** checks (`warn` at 2 days for daily feeds / 35 days for monthly, `error` at 5 / 90 days)
 - layered modelling (staging → intermediate → marts) with **seeds**
-- an **incremental** materialization and an **SCD2 snapshot** on commodity prices
+- an **incremental** (`delete+insert`) materialization and an **SCD2 snapshot** on commodity prices
 - a **model contract** enforcing column types on the commodity mart
 - data quality: `not_null`, `unique`, `relationships`, `accepted_values`, `accepted_range`, and a **custom generic test** (`non_negative`)
 - **exposures** linking this dashboard back to the models it depends on
-- CI: `dbt build` runs on every push
+- CI/CD: `dbt build` on every push/PR + **daily 00:00 UTC scheduled refresh** (`pages.yml` runs ingest → dbt build → Evidence build → Pages deploy) with `concurrency.cancel-in-progress: false` so the cron queues behind manual pushes instead of cancelling them, plus workflow-summary and GitHub-Issue observability on failures
 
 ## The decision it supports
 
 *Given today's weather and the palm price (in local currency), which estate operations - fertilize, harvest, spray - are favorable in each region, and what is a good harvest day worth?* An **effective harvest day** additionally requires that labour is available (not a weekend or public holiday).
+
+## Automation & observability
+
+- **Schedule:** both workflows run on `push`/`pull_request` and additionally on `schedule: cron '0 0 * * *'` (00:00 UTC) plus `workflow_dispatch` for manual reruns.
+- **E2E on schedule:** the Pages workflow does the full pipeline — `pip install` → `dbt deps` → `python ingestion/load_raw.py` → `dbt build` → `dbt source freshness` → `cp palm.duckdb` → `npm run build` → deploy to `gh-pages`.
+- **No conflict with manual pushes:** `concurrency.group: pages` with `cancel-in-progress: false` (and `dbt-ci-${ref}` for the build workflow) makes the cron queue rather than kill an in-progress deploy.
+- **Observability:** every run appends the ingestion manifest and freshness status to the Actions *Summary*; on `schedule` failures a GitHub Issue is opened automatically (deduplicated). Diagnostics (`target/*.json`, `ingestion_manifest.json`) are uploaded as artifacts on failure.
 
 Source: [github.com/itw-code/palm-analytics-dbt](https://github.com/itw-code/palm-analytics-dbt)

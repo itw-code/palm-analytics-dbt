@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Palm Analytics — End-to-End Pipeline Explained</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --border: #30363d;
+    --text: #e6edf3; --muted: #8b949e;
+    --green: #3fb950; --blue: #58a6ff; --orange: #f0883e; --purple: #bc8cff; --yellow: #d29922;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: "Segoe UI", system-ui, sans-serif; line-height: 1.65; padding: 2rem; }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  h1 { font-size: 2rem; margin-bottom: .3rem; }
+  h1 span { color: var(--orange); }
+  .sub { color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.3rem; margin: 2.2rem 0 .8rem; padding-bottom: .3rem; border-bottom: 1px solid var(--border); }
+  h2 .step { color: var(--blue); font-family: monospace; margin-right: .5rem; }
+  p { margin-bottom: .8rem; }
+  .diagram { display: flex; flex-wrap: wrap; gap: .6rem; align-items: stretch; margin: 1.2rem 0 2rem; }
+  .node { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: .8rem 1rem; flex: 1 1 130px; text-align: center; min-width: 130px; }
+  .node b { display: block; font-size: .95rem; }
+  .node small { color: var(--muted); }
+  .node.src { border-top: 3px solid var(--yellow); }
+  .node.ing { border-top: 3px solid var(--orange); }
+  .node.wh  { border-top: 3px solid var(--blue); }
+  .node.dbt { border-top: 3px solid var(--purple); }
+  .node.bi  { border-top: 3px solid var(--green); }
+  .arrow { align-self: center; color: var(--muted); font-size: 1.3rem; }
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .92rem; }
+  th, td { border: 1px solid var(--border); padding: .55rem .75rem; text-align: left; vertical-align: top; }
+  th { background: var(--panel); }
+  code { background: #21262d; padding: .12rem .4rem; border-radius: 5px; font-family: Consolas, monospace; font-size: .88em; color: #ffa657; }
+  pre { background: #161b22; border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.2rem; overflow-x: auto; margin: .8rem 0 1.4rem; font-size: .85rem; line-height: 1.55; }
+  pre code { background: none; padding: 0; color: var(--text); }
+  .cm { color: #8b949e; } .kw { color: #ff7b72; } .str { color: #a5d6ff; } .fn { color: #d2a8ff; }
+  .tip { background: #12261e; border: 1px solid #1f4d38; border-left: 4px solid var(--green); border-radius: 8px; padding: .8rem 1rem; margin: 1rem 0; font-size: .93rem; }
+  .warn { background: #2a1f10; border: 1px solid #59401c; border-left: 4px solid var(--yellow); border-radius: 8px; padding: .8rem 1rem; margin: 1rem 0; font-size: .93rem; }
+  .layers { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1rem; margin: 1.2rem 0; }
+  .layer { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; }
+  .layer h3 { font-size: .95rem; margin-bottom: .4rem; }
+  .layer.stg h3 { color: var(--yellow); } .layer.int h3 { color: var(--blue); } .layer.mart h3 { color: var(--green); }
+  .layer ul { list-style: none; }
+  .layer li { font-size: .85rem; color: var(--muted); padding: .15rem 0; }
+  .layer li code { color: var(--text); font-size: .8rem; }
+  .badge { display: inline-block; font-size: .72rem; padding: .1rem .5rem; border-radius: 20px; border: 1px solid var(--border); color: var(--muted); margin-left: .3rem; }
+  footer { margin-top: 3rem; color: var(--muted); font-size: .85rem; border-top: 1px solid var(--border); padding-top: 1rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>🌴 Palm Analytics — <span>End-to-End Pipeline Explained</span></h1>
+<p class="sub">A beginner-friendly walkthrough of this repo, for someone who knows <b>dbt</b> + <b>DuckDB</b> and is entering analytics engineering. Every snippet below is real code from this repository.</p>
+
+<div class="diagram">
+  <div class="node src"><b>4 Public APIs</b><small>Open-Meteo · Frankfurter · Nager.Date · World Bank</small></div>
+  <div class="arrow">→</div>
+  <div class="node ing"><b>Python ingestion</b><small>ingestion/load_raw.py</small></div>
+  <div class="arrow">→</div>
+  <div class="node wh"><b>DuckDB</b><small>palm.duckdb (raw tables)</small></div>
+  <div class="arrow">→</div>
+  <div class="node dbt"><b>dbt build</b><small>stg → int → marts + tests</small></div>
+  <div class="arrow">→</div>
+  <div class="node bi"><b>Evidence.dev</b><small>static dashboard → GitHub Pages</small></div>
+</div>
+
+<h2><span class="step">0.</span>The big picture — ELT, not ETL</h2>
+<p>This project follows the <b>Modern Data Stack</b> pattern: <b>Extract & Load</b> (Python dumps raw data into the warehouse <i>untouched</i>), then <b>Transform</b> (dbt does all cleaning/business logic <i>inside</i> DuckDB with SQL). There is no separate "transform in Python" step — SQL is the transformation language, version-controlled and testable.</p>
+<div class="tip">💡 <b>Why ELT?</b> Raw data stays queryable for debugging ("what did the API actually return?"), and dbt gives you lineage, tests, and docs for free — things a Python script can't provide.</div>
+
+<h2><span class="step">1.</span>Extract & Load — <code>ingestion/load_raw.py</code></h2>
+<p>A single Python script fetches 4 heterogeneous sources and writes <b>raw tables</b> straight into DuckDB:</p>
+<table>
+  <tr><th>Source</th><th>Provides</th><th>Raw table</th><th>Grain</th></tr>
+  <tr><td>Open-Meteo Archive</td><td>daily weather per estate region</td><td><code>raw_weather</code></td><td>region × day</td></tr>
+  <tr><td>Frankfurter (ECB)</td><td>USD→IDR reference rate</td><td><code>raw_fx_rate</code></td><td>business day</td></tr>
+  <tr><td>Nager.Date</td><td>Indonesian public holidays</td><td><code>raw_holidays</code></td><td>date</td></tr>
+  <tr><td>World Bank Pink Sheet</td><td>monthly palm/soybean oil prices</td><td><code>raw_commodity_price</code></td><td>month × commodity</td></tr>
+</table>
+<p>Key ideas in the script:</p>
+<pre><code><span class="cm"># 1) RETRY with backoff — transient API blips shouldn't fail the whole pipeline</span>
+<span class="kw">def</span> <span class="fn">fetch_with_retry</span>(fn, *, retries=3, backoff=2.0, label=<span class="str">""</span>):
+    <span class="kw">for</span> attempt <span class="kw">in</span> <span class="fn">range</span>(1, retries + 1):
+        <span class="kw">try</span>:
+            <span class="kw">return</span> <span class="fn">fn</span>()
+        <span class="kw">except</span> Exception <span class="kw">as</span> e:
+            ...
+            <span class="fn">time</span>.<span class="fn">sleep</span>(backoff * attempt)  <span class="cm"># 2s, 4s, 6s…</span>
+
+<span class="cm"># 2) DETERMINISTIC FALLBACK — if offline, generate synthetic-but-stable data</span>
+<span class="cm">#    so CI is always reproducible. NEVER silent: a manifest records provenance.</span>
+provenance[<span class="str">"sources"</span>][<span class="str">"fx"</span>] = {<span class="str">"mode"</span>: <span class="str">"synthetic"</span>, <span class="str">"error"</span>: str(e)}
+<span class="cm"># → ingestion_manifest.json → shown in the GitHub Actions run Summary</span>
+
+<span class="cm"># 3) LOAD — plain CREATE TABLE + executemany into DuckDB (no cleaning here!)</span>
+con = duckdb.<span class="fn">connect</span>(<span class="str">"palm.duckdb"</span>)
+con.<span class="fn">execute</span>(<span class="str">"CREATE OR REPLACE TABLE raw_fx_rate (rate_date DATE, usd_idr DOUBLE)"</span>)
+con.<span class="fn">executemany</span>(<span class="str">"INSERT INTO raw_fx_rate VALUES (?,?)"</span>, rows)</code></pre>
+<div class="warn">⚠️ <b>Production lesson:</b> the fallback is <i>graceful but loud</i>. In CI a green build with <code>"mode": "synthetic"</code> would be a silent data-quality failure — the manifest + <code>::warning::</code> annotations exist precisely so you can't miss it. Pass <code>--require-live</code> to make degradation fail the run instead.</div>
+
+<h2><span class="step">2.</span>The Warehouse — why DuckDB?</h2>
+<p><b>DuckDB</b> is "SQLite for analytics": a single file (<code>palm.duckdb</code>), zero servers, columnar + vectorized execution. Perfect for a laptop-sized warehouse, and it scales to <b>MotherDuck</b> (cloud) by changing one profile line.</p>
+<pre><code><span class="cm"># profiles.yml — the only config dbt needs to talk to the warehouse</span>
+palm_analytics:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: palm.duckdb
+      threads: 4          <span class="cm"># parallel model builds</span></code></pre>
+
+<h2><span class="step">3.</span>Transform — dbt layers (stg → int → marts)</h2>
+<p>dbt models are just SQL files with a <code>ref()</code> graph. This repo uses the standard 3-layer architecture:</p>
+<div class="layers">
+  <div class="layer stg"><h3>staging (views) — 1:1 with sources</h3><ul>
+    <li><code>stg_weather</code> — rename + cast, nothing else</li>
+    <li><code>stg_fx_rate</code>, <code>stg_holidays</code>, <code>stg_commodity_price</code></li>
+    <li>Goal: a clean, typed contract per source</li></ul></div>
+  <div class="layer int"><h3>intermediate (views) — reusable logic</h3><ul>
+    <li><code>int_calendar</code> — date spine</li>
+    <li><code>int_fx_daily</code> — ASOF forward-fill</li>
+    <li><code>int_commodity_daily</code> — monthly→daily fill</li>
+    <li><code>int_daily_agronomy_signals</code> — business rules</li></ul></div>
+  <div class="layer mart"><h3>marts (tables) — the star schema</h3><ul>
+    <li><code>dim_date</code>, <code>dim_region</code></li>
+    <li><code>fct_estate_operations_daily</code> (incremental)</li>
+    <li><code>fct_commodity_price_daily</code> (contract)</li>
+    <li>What dashboards consume</li></ul></div>
+</div>
+<p>The most interesting SQL trick — <b>ASOF joins</b> for forward-filling sparse series (FX exists only on business days, prices only monthly) onto a daily spine:</p>
+<pre><code><span class="cm">-- int_fx_daily.sql: for each calendar day, take the LATEST rate on-or-before it</span>
+<span class="kw">select</span>
+    c.date_day,
+    f.usd_idr
+<span class="kw">from</span> {{ <span class="fn">ref</span>(<span class="str">'int_calendar'</span>) }} c
+<span class="kw">asof</span> <span class="kw">left join</span> {{ <span class="fn">ref</span>(<span class="str">'stg_fx_rate'</span>) }} f
+    <span class="kw">on</span> c.date_day &gt;= f.rate_date</code></pre>
+<div class="tip">💡 <b>Business rules live in intermediate:</b> "fertilize when 5–25&nbsp;mm rain and soil moisture &lt; 0.35", "spray when wind &lt; 12&nbsp;km/h and rain &lt; 5&nbsp;mm". Encoded once as booleans (<code>is_fertilize_favorable</code>), reused by marts and the dashboard.</div>
+
+<h2><span class="step">4.</span>Incremental models — don't rebuild everything</h2>
+<p><code>fct_estate_operations_daily</code> is <b>incremental</b>: on the first run it builds fully; afterwards it only processes <i>new</i> dates:</p>
+<pre><code>{{ <span class="fn">config</span>(materialized=<span class="str">'incremental'</span>,
+         unique_key=<span class="str">'operations_key'</span>,
+         incremental_strategy=<span class="str">'delete+insert'</span>,   <span class="cm"># DuckDB-friendly</span>
+         on_schema_change=<span class="str">'sync_all_columns'</span>) }}
+
+...
+{% <span class="kw">if</span> <span class="fn">is_incremental</span>() %}
+<span class="kw">where</span> signals.weather_date &gt; (<span class="kw">select</span> <span class="fn">max</span>(operation_date) <span class="kw">from</span> {{ <span class="kw">this</span> }})
+{% <span class="kw">endif</span> %}</code></pre>
+<p><code>delete+insert</code> deletes rows matching <code>unique_key</code> then inserts fresh ones — idempotent re-runs, late-arriving days get corrected, and the scan is pruned to only new dates.</p>
+
+<h2><span class="step">5.</span>Tests, contracts & snapshots — the quality gates</h2>
+<table>
+  <tr><th>Feature</th><th>What it does</th><th>Example from repo</th></tr>
+  <tr><td>Generic tests</td><td>data quality assertions, run on every build</td><td><code>not_null</code>, <code>unique</code>, <code>relationships</code>, custom <code>non_negative</code></td></tr>
+  <tr><td>Model contract</td><td>fails the build if column <i>types</i> drift</td><td><code>fct_commodity_price_daily</code> — <code>contract.enforced: true</code></td></tr>
+  <tr><td>Source freshness</td><td>"how stale is the raw data?"</td><td>warn @ 3 days, error @ 90 days</td></tr>
+  <tr><td>Snapshot (SCD2)</td><td>keeps history when prices are revised</td><td><code>commodity_price_snapshot</code> (check strategy)</td></tr>
+  <tr><td>Exposure</td><td>links the dashboard to its upstream models</td><td><code>estate_operations_dashboard</code> in lineage</td></tr>
+</table>
+<pre><code>$ dbt build            <span class="cm"># runs models + ALL tests in DAG order — one command, 56 checks</span>
+$ dbt source freshness <span class="cm"># is the raw data current?</span>
+$ dbt docs generate    <span class="cm"># clickable lineage graph</span></code></pre>
+
+<h2><span class="step">6.</span>Serve — Evidence.dev → static HTML → GitHub Pages</h2>
+<p>Evidence pages are <b>Markdown + SQL</b>. Each SQL block runs against DuckDB; Svelte components render charts:</p>
+<pre><code><span class="cm">```sql headline</span>
+<span class="kw">select</span> <span class="fn">max</span>(operation_date) <span class="kw">as</span> as_of, <span class="fn">max</span>(cpo_idr_per_tonne) <span class="kw">as</span> cpo_idr
+<span class="kw">from</span> palm.operations_daily
+<span class="cm">```</span>
+
+&lt;BigValue data={headline} value=cpo_idr title=<span class="str">"Palm price (IDR/tonne)"</span>/&gt;</code></pre>
+<p><code>evidence build</code> compiles everything into a static site (<code>dashboard/build/</code>) — no BI server to run, hosting is free on GitHub Pages.</p>
+
+<h2><span class="step">7.</span>Automate — the daily 00:00 UTC refresh</h2>
+<p>Two GitHub Actions workflows make it hands-off:</p>
+<table>
+  <tr><th>Workflow</th><th>Triggers</th><th>Does</th></tr>
+  <tr><td><code>dbt.yml</code></td><td>push / PR / <b>daily cron</b></td><td>ingest → <code>dbt build</code> → freshness → docs</td></tr>
+  <tr><td><code>pages.yml</code></td><td>push to main / <b>daily cron</b> / manual</td><td>full E2E → deploy static site</td></tr>
+</table>
+<pre><code><span class="kw">on</span>:
+  push: { branches: [main] }
+  pull_request:
+  schedule:
+    - <span class="kw">cron</span>: <span class="str">'0 0 * * *'</span>   <span class="cm"># daily 00:00 UTC</span>
+
+<span class="kw">concurrency</span>:
+  <span class="kw">group</span>: pages
+  <span class="kw">cancel-in-progress</span>: <span class="kw">false</span>  <span class="cm"># cron QUEUES behind your manual push — no kill</span></code></pre>
+<p><b>Observability built in:</b> the run Summary shows the ingestion manifest (live vs synthetic per source) + freshness status; a scheduled failure auto-opens a GitHub Issue; diagnostics are uploaded as artifacts.</p>
+
+<h2><span class="step">8.</span>Glossary</h2>
+<table>
+  <tr><th>Term</th><th>Plain meaning</th></tr>
+  <tr><td>ELT</td><td>Load raw first, transform in the warehouse (vs ETL: transform on the way in)</td></tr>
+  <tr><td>Staging model</td><td>thin view over one raw table: rename + cast only</td></tr>
+  <tr><td>Star schema</td><td>fact tables (events, numbers) joined to dimension tables (who/what/when)</td></tr>
+  <tr><td>ASOF join</td><td>"give me the most recent row on or before this date" — built into DuckDB</td></tr>
+  <tr><td>Incremental model</td><td>only process new data on each run instead of rebuilding everything</td></tr>
+  <tr><td>SCD Type 2</td><td>keep full history of changes (valid_from / valid_to) instead of overwriting</td></tr>
+  <tr><td>Model contract</td><td>enforce column names + types; build fails if a mart's shape drifts</td></tr>
+  <tr><td>Source freshness</td><td>alert when raw data stops arriving on schedule</td></tr>
+  <tr><td>Idempotent</td><td>running it twice gives the same result as running it once (safe re-runs)</td></tr>
+</table>
+
+<footer>
+  Generated from <b>palm-analytics-dbt</b> · commit <code>135f3f1</code> · live dashboard: <a style="color:var(--blue)" href="https://itw-code.github.io/palm-analytics-dbt/">itw-code.github.io/palm-analytics-dbt</a><br>
+  Suggested learning path: read this top-to-bottom, then open the referenced files in the repo, then run <code>dbt build --profiles-dir .</code> locally and watch the DAG execute.
+</footer>
+
+</div>
+</body>
+</html>

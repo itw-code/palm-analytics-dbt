@@ -1,6 +1,14 @@
 -- Incremental daily fact: agronomy signals joined to commodity price + FX and the
 -- holiday/weekend calendar, yielding local-currency value and an "effective harvest day".
-{{ config(materialized='incremental', unique_key='operations_key', on_schema_change='sync_all_columns') }}
+-- Performance: delete+insert lets re-ingested late-arriving days overwrite cleanly;
+-- the predicate narrows the scan to only new dates (DuckDB benefits from this
+-- partition-like pruning even without native partitions).
+{{ config(
+    materialized='incremental',
+    unique_key='operations_key',
+    incremental_strategy='delete+insert',
+    on_schema_change='sync_all_columns'
+) }}
 
 with signals as (
     select * from {{ ref('int_daily_agronomy_signals') }}
