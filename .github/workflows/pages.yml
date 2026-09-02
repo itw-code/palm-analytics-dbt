@@ -65,6 +65,7 @@ jobs:
               if 'warn' in statuses:
                   print('::warning::source freshness warn detected - will annotate summary')
           "
+          python scripts/generate_status.py || echo "[status] generation failed (non-blocking)"
           cp palm.duckdb dashboard/sources/palm/palm.duckdb
           ls -lh palm.duckdb dashboard/sources/palm/palm.duckdb
         env:
