@@ -25,7 +25,7 @@ select
     o.operation_date,
     r.region_name,
     round(o.precip_mm, 1) as precip_mm,
-    round(o.humidity_pct, 0) as humidity_pct,
+    round(o.humidity_pct, 0) as humidity,
     round(o.water_deficit_mm, 1) as water_deficit_mm,
     o.is_fertilize_favorable as fertilize,
     o.is_harvest_favorable as harvest,
@@ -61,7 +61,7 @@ where region_key like '${inputs.region.value}'
     <Column id=operation_date title="Date"/>
     <Column id=region_name title="Region"/>
     <Column id=precip_mm title="Precip (mm)"/>
-    <Column id=humidity_pct title="Humidity (%)"/>
+    <Column id=humidity title="Humidity (%)" fmt="num0"/>
     <Column id=water_deficit_mm title="Deficit (mm)"/>
     <Column id=cpo_idr_per_tonne title="CPO (IDR/t)" fmt="#,##0"/>
     <Column id=harvest title="Harvest" contentType=colorindicator/>

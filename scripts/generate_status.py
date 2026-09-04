@@ -61,7 +61,10 @@ def main() -> int:
 
     lake = manifest.get("lake", {}) if isinstance(manifest, dict) else {}
     row_counts = manifest.get("row_counts", {}) if isinstance(manifest, dict) else {}
-    generated_at = manifest.get("generated_at") or dt.datetime.utcnow().isoformat() + "Z"
+    # Stamp when THIS ledger row is written, not when ingestion ran: the manifest
+    # timestamp can belong to an earlier run's artifact, which made /status show
+    # a stale "Generated at" even though the data itself was fresh.
+    generated_at = dt.datetime.utcnow().isoformat() + "Z"
     warehouse = manifest.get("warehouse") or "ducklake"
     status = manifest.get("status") or "unknown"
     synthetic = manifest.get("synthetic_sources", 0)
