@@ -1,0 +1,65 @@
+version: 2
+
+models:
+  - name: rec_harvest_features
+    description: Per-region 7-day harvest features - weather, labour and price sub-scores.
+    columns:
+      - name: forecast_key
+        tests: [not_null, unique]
+      - name: region_key
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_region')
+                field: region_key
+      - name: forecast_date
+        tests: [not_null]
+      - name: weather_score
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+      - name: labour_score
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+      - name: price_score
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0.05
+                max_value: 1
+
+unit_tests:
+  - name: test_rec_harvest_features_scores_multiply_and_clamp
+    description: Weekend halves labour, soggy air halves weather, weak price floors at 0.05.
+    model: rec_harvest_features
+    given:
+      - input: ref('fct_estate_forecast_7day')
+        format: sql
+        rows: >
+          select 'k1' as forecast_key, 'riau' as region_key, DATE '2026-09-07' as forecast_date,
+            1 as horizon_days, 2.0::double as precip_mm, 85.0::double as humidity_pct,
+            true as is_harvest_favorable, false as is_holiday, false as is_weekend,
+            17965352.0::double as cpo_idr_per_tonne
+          union all
+          select 'k2', 'riau', DATE '2026-09-06',
+            2, 30.0::double, 95.0::double,
+            false, false, true,
+            17238815.0::double
+      - input: ref('fct_commodity_price_daily')
+        format: sql
+        rows: >
+          select DATE '2026-09-01' as price_date, 950.0::double as palm_oil_usd,
+            1071.0::double as soybean_oil_usd, -121.0::double as palm_soy_spread_usd,
+            17238.0::double as usd_idr, 17238815.0::double as palm_oil_idr
+          union all
+          select DATE '2026-09-02', 1018.0, 1091.0, -73.0, 17647.0, 17965352.0
+    expect:
+      rows:
+        - {forecast_key: 'k1', weather_score: 0.92, labour_score: 1.0, price_score: 1.0}
+        - {forecast_key: 'k2', weather_score: 0.0, labour_score: 0.4, price_score: 0.05}

@@ -1,0 +1,65 @@
+version: 2
+
+models:
+  - name: rec_harvest_day_ranked
+    description: >-
+      Ranked 7-day harvest-day recommender per region; composite = weather *
+      labour * price with harvest / conditional / stand_down bands.
+    columns:
+      - name: forecast_key
+        tests: [not_null, unique]
+      - name: region_key
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_region')
+                field: region_key
+      - name: forecast_date
+        tests: [not_null]
+      - name: composite_score
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 1
+      - name: recommendation
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['harvest', 'conditional', 'stand_down']
+
+  - name: whatif_margin_shocks
+    description: Price x FX shock grid on yesterday's harvested margin per region.
+    columns:
+      - name: whatif_key
+        tests: [not_null, unique]
+      - name: scenario
+        tests: [not_null]
+      - name: shocked_margin_idr_per_ha
+        tests: [not_null]
+
+  - name: forecast_cpo_30day
+    description: 30-day naive OLS trend outlook on CPO USD with a 95% residual band.
+    columns:
+      - name: forecast_date
+        tests: [not_null, unique]
+      - name: forecast_palm_usd
+        tests: [non_negative]
+      - name: lower_usd
+        tests: [non_negative]
+
+  - name: rec_anomaly_flags
+    description: Rainfall-deficit and price-spike flags per region-day, last 60 days.
+    columns:
+      - name: anomaly_key
+        tests: [not_null, unique]
+      - name: region_key
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_region')
+                field: region_key
+      - name: operation_date
+        tests: [not_null]
