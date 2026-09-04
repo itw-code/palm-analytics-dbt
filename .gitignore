@@ -33,6 +33,7 @@ ingestion_manifest.json
 
 # local-only project status for future coding agents (never publish)
 PROJECT_STATUS.md
+checkpoint.md
 
 # generated debug artifact from scripts/generate_status.py (page reads DuckDB status_summary instead)
 dashboard/static/status.json
