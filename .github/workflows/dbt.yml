@@ -52,7 +52,10 @@ jobs:
           INGEST_REQUIRE_LIVE: "0"
           # Schedule & manual dispatch ingest through YESTERDAY (fresh data);
           # push/PR keep the pinned 2026-06-30 window for deterministic CI.
-          PALM_USE_LIVE_DATE: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' && '1' || '0' }}
+          # NOTE: parentheses are required — && binds tighter than ||, so without
+          # them a schedule event yields boolean `true`, never the string '1'
+          # that load_raw.py checks, silently pinning scheduled runs to June.
+          PALM_USE_LIVE_DATE: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '1' || '0' }}
 
       - name: Summarise ingestion provenance
         if: always() && steps.ingest.outcome != 'skipped'
@@ -109,20 +112,29 @@ jobs:
               max_loaded=src.get('max_loaded_at') or src.get('max_loaded_at_time') or '?'
               print(f'- **{name}**: {status} (max_loaded_at={max_loaded})')
           " >> $GITHUB_STEP_SUMMARY || echo "freshness summary failed" >> $GITHUB_STEP_SUMMARY
-          # Fail the job only if dbt flagged an error (not just warn); warnings are surfaced above.
+          # Fail the job on error ONLY for live-date runs (schedule/dispatch ingest
+          # through yesterday, so staleness there is a real regression). Pinned
+          # push/PR runs intentionally use the 2026-06-30 fixture, which ages past
+          # the warn threshold by design — failing them on error just forces
+          # recurring threshold bumps. Warnings are surfaced above either way.
           python -c "
-          import json, pathlib, sys
+          import json, os, pathlib, sys
           p = pathlib.Path('target/freshness.json')
           if not p.exists():
               raise SystemExit(0)
           j=json.load(open(p))
           statuses=[r.get('status') for r in j.get('results',[])]
+          live = os.environ.get('PALM_USE_LIVE_DATE') == '1'
           if 'error' in statuses or 'fail' in statuses:
-              print('::error::source freshness reported error/fail - failing job')
-              sys.exit(1)
+              if live:
+                  print('::error::source freshness reported error/fail on a live-date run - failing job')
+                  sys.exit(1)
+              print('::warning::source freshness error/fail on a pinned-fixture run - advisory only (see summary)')
           if 'warn' in statuses:
               print('::warning::source freshness reported warn - see summary')
           "
+        env:
+          PALM_USE_LIVE_DATE: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '1' || '0' }}
 
       - name: Flag stale freshness as annotation
         if: steps.freshness.outcome == 'failure'

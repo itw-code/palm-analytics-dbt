@@ -51,17 +51,22 @@ jobs:
           dbt build --profiles-dir .
           # Advisory freshness — never hide it behind continue-on-error; parse the JSON instead.
           dbt source freshness --profiles-dir . --output target/freshness.json || true
-          # Fail only on error, surface warn in the summary
+          # Fail on error ONLY for live-date runs (schedule/dispatch ingest through
+          # yesterday, so staleness there is a real regression). Pinned push runs
+          # use the 2026-06-30 fixture by design — advisory only, never fail.
           python -c "
-          import json, pathlib, sys
+          import json, os, pathlib, sys
           p = pathlib.Path('target/freshness.json')
           if p.exists():
               j=json.load(open(p))
               statuses=[r.get('status') for r in j.get('results',[])]
               print('freshness statuses:', statuses)
+              live = os.environ.get('PALM_USE_LIVE_DATE') == '1'
               if 'error' in statuses or 'fail' in statuses:
-                  print('::error::source freshness error/fail detected')
-                  sys.exit(1)
+                  if live:
+                      print('::error::source freshness error/fail detected on a live-date run')
+                      sys.exit(1)
+                  print('::warning::source freshness error/fail on a pinned-fixture run - advisory only')
               if 'warn' in statuses:
                   print('::warning::source freshness warn detected - will annotate summary')
           "
@@ -72,7 +77,10 @@ jobs:
           INGEST_REQUIRE_LIVE: "0"
           # Schedule & manual dispatch ingest data through YESTERDAY (truly fresh).
           # Push/PR runs keep the pinned 2026-06-30 window so CI stays deterministic.
-          PALM_USE_LIVE_DATE: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' && '1' || '0' }}
+          # NOTE: parentheses are required — && binds tighter than ||, so without
+          # them a schedule event yields boolean `true`, never the string '1'
+          # that load_raw.py checks, silently pinning scheduled runs to June.
+          PALM_USE_LIVE_DATE: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '1' || '0' }}
 
       - name: Summarise ingestion & freshness
         if: always() && steps.warehouse.outcome != 'skipped'

@@ -289,6 +289,14 @@ def main() -> int:
     forecast_dates = [_today + dt.timedelta(days=i) for i in range(1, FORECAST_WINDOW + 1)]
     years = sorted({d.year for d in dates} | {d.year for d in forecast_dates})
     months = month_starts(dates)
+    # Commodity is monthly + always synthetic until the World Bank parser is wired.
+    # If months derives from the pinned window alone, max(price_month) freezes
+    # (e.g. 2026-06-01) while wall-clock advances -> recurring freshness ERROR.
+    # Union today's month so the synthetic series stays current on every run.
+    _this_month = dt.date(_today.year, _today.month, 1)
+    if _this_month not in months:
+        months.append(_this_month)
+        months.sort()
 
     provenance: dict = {
         "generated_at": dt.datetime.utcnow().isoformat() + "Z",
