@@ -2,7 +2,7 @@
 title: Trust & Data Health
 ---
 
-How this dashboard is built, tested, and monitored — the trust ledger. Updated on every run.
+How this dashboard is built, tested, and monitored — the trust ledger · Kepercayaan & kesehatan data. Updated on every run.
 
 ```sql status
 select * from palm.status
@@ -17,7 +17,7 @@ select * from palm.status
 {/if}
 
 {#if status[0].synthetic_sources > 0}
-<Alert status="warning" title="Synthetic fallback active">`synthetic_sources = {status[0].synthetic_sources}` — at least one API fell back to deterministic synthetic data. Commodity is always synthetic until the World Bank parser is wired. See ingestion manifest.</Alert>
+<Alert status="warning" title="Synthetic fallback active">`synthetic_sources = {status[0].synthetic_sources}` — at least one API fell back to deterministic synthetic data (see ingestion manifest for which source).</Alert>
 {/if}
 
 <Grid cols=3>
@@ -38,7 +38,7 @@ select * from palm.status
 
 *Every scheduled run appends this same ledger to the GitHub Actions Summary and, on failure, opens a deduplicated Issue. Lake snapshots are queryable at any past `snapshot_id` via DuckLake time travel.*
 
-## Margin assumptions
+## Margin assumptions · Asumsi marjin
 
 The margin mart uses `seeds/cost_assumptions.csv` — fertilizer, harvest and transport costs per region plus extraction rate. Replace those seed values with your estate's actuals and the margin recomputes everywhere. Formula per effective harvest day:
 

@@ -2,7 +2,9 @@
 title: Margin per Hectare
 ---
 
-P&L per hectare derived from the same price + yield + extraction rate that powers the operations planner, minus your seeded cost assumptions. On non-effective days you still carry fertilizer cost. Replace `seeds/cost_assumptions.csv` with your estate's actuals and every number recomputes.
+P&L per hectare · Laba-rugi per hektar, derived from the same price + yield + extraction rate that powers the operations planner, minus your seeded cost assumptions. On non-effective days you still carry fertilizer cost. Replace `seeds/cost_assumptions.csv` with your estate's actuals and every number recomputes.
+
+*Drill-down: [National](/) → [Region](/operations) → [Day](/operations) → **Operation value · Nilai tindakan** (this page).*
 
 ```sql regions_list
 select region_key, region_name from palm.region order by region_name
@@ -28,13 +30,15 @@ limit 30
 ```
 
 <DataTable data={margin_recent} rows=15>
-    <Column id=operation_date title="Date"/>
-    <Column id=region_name title="Region"/>
+    <Column id=operation_date title="Date · Tgl"/>
+    <Column id=region_name title="Region · Wilayah"/>
     <Column id=revenue_idr_per_ha title="Revenue/ha (IDR)" fmt="#,##0"/>
     <Column id=margin_idr_per_ha title="Margin/ha (IDR)" fmt="#,##0"/>
     <Column id=margin_total_idr title="Margin total (IDR)" fmt="#,##0"/>
-    <Column id=is_effective_harvest_day title="Harvest day" contentType=colorindicator/>
+    <Column id=is_effective_harvest_day title="Harvest day · Panen" contentType=colorindicator/>
 </DataTable>
+
+## Margin trend · Tren marjin
 
 ```sql margin_trend
 select operation_date, avg(margin_idr_per_ha) as avg_margin_ha
@@ -44,6 +48,6 @@ group by operation_date
 order by operation_date
 ```
 
-<LineChart data={margin_trend} x=operation_date y=avg_margin_ha yAxisTitle="Avg margin/ha (IDR)" yFmt="#,##0"/>
+<LineChart data={margin_trend} x=operation_date y=avg_margin_ha title="Average margin per hectare by day" xAxisTitle="Date" yAxisTitle="IDR / ha" yFmt="#,##0"/>
 
 *Formula: `revenue = CPO_IDR * yield * extraction_rate` (only on effective harvest days); `margin_per_ha = revenue - fertilizer - harvest - transport`, else `-fertilizer`. Edit `cost_assumptions.csv` and the margin rebuilds everywhere.*

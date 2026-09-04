@@ -14,7 +14,7 @@ This dashboard is the serving layer of an end-to-end analytics-engineering pipel
 | Nager.Date | Indonesia public-holiday calendar | keyless |
 | World Bank Pink Sheet | monthly palm-oil & soybean-oil prices | keyless |
 
-All ingestion attempts a live fetch with retries and falls back to deterministic synthetic data, so the pipeline and its CI are always reproducible offline. **In production the fallback is never silent:** `ingestion/load_raw.py` writes `ingestion_manifest.json` with per-source provenance (`live` vs `synthetic`) and the scheduled GitHub Actions job surfaces any synthetic fallback as a warning in the workflow summary — and optionally opens a GitHub issue. Pass `--require-live` to make the pipeline fail-fast instead of degrading. Commodity price is *always* synthetic today because the World Bank Pink Sheet parser is stubbed (known limitation, flagged explicitly in the manifest).
+All ingestion attempts a live fetch with retries and falls back to deterministic synthetic data, so the pipeline and its CI are always reproducible offline. **In production the fallback is never silent:** `ingestion/load_raw.py` writes `ingestion_manifest.json` with per-source provenance (`live` vs `synthetic`) and the scheduled GitHub Actions job surfaces any synthetic fallback as a warning in the workflow summary — and optionally opens a GitHub issue. Pass `--require-live` to make the pipeline fail-fast instead of degrading. Commodity prices are live World Bank Pink Sheet "Monthly Prices" data (header-located palm/soybean-oil columns, `$/mt`), fetched with retry plus edition-URL fallback and overridable via `PALM_PINK_SHEET_URL`; multi-year backfill via `PALM_START_DATE`.
 
 ## Transformation layers (dbt)
 

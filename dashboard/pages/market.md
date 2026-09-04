@@ -23,26 +23,28 @@ order by price_date desc
 limit 1
 ```
 
-<BigValue data={market_now} value=palm_oil_usd fmt="usd0" title="Palm oil (USD/t)"/>
-<BigValue data={market_now} value=soybean_oil_usd fmt="usd0" title="Soybean oil (USD/t)"/>
-<BigValue data={market_now} value=palm_soy_spread_usd fmt="usd0" title="Palm − Soy spread"/>
-<BigValue data={market_now} value=usd_idr fmt="#,##0" title="USD/IDR"/>
+<Grid cols=2>
+  <BigValue data={market_now} value=palm_oil_usd fmt="usd0" title="Palm oil · Minyak sawit (USD/t)"/>
+  <BigValue data={market_now} value=soybean_oil_usd fmt="usd0" title="Soybean oil · Minyak kedelai (USD/t)"/>
+  <BigValue data={market_now} value=palm_soy_spread_usd fmt="usd0" title="Palm − Soy spread · Selisih (USD/t)"/>
+  <BigValue data={market_now} value=usd_idr fmt="#,##0" title="USD/IDR · Kurs (IDR)"/>
+</Grid>
 
-## Palm vs soybean oil (USD/tonne)
+## Palm vs soybean oil · Sawit vs kedelai
 
-<LineChart data={market} x=price_date y={['palm_oil_usd','soybean_oil_usd']} yAxisTitle="USD / tonne"/>
+<LineChart data={market} x=price_date y={['palm_oil_usd','soybean_oil_usd']} title="Palm vs soybean oil price" xAxisTitle="Date" yAxisTitle="USD / tonne"/>
 
-## Palm − soybean substitution spread
+## Palm − soybean substitution spread · Selisih substitusi
 
 A negative spread means palm trades at a discount to soybean oil (palm looks attractive to buyers).
 
-<LineChart data={market} x=price_date y=palm_soy_spread_usd yAxisTitle="USD / tonne"/>
+<LineChart data={market} x=price_date y=palm_soy_spread_usd title="Palm minus soybean spread" xAxisTitle="Date" yAxisTitle="USD / tonne"/>
 
-## USD/IDR exchange rate
+## USD/IDR exchange rate · Kurs
 
-<LineChart data={market} x=price_date y=usd_idr yAxisTitle="IDR per USD"/>
+<LineChart data={market} x=price_date y=usd_idr title="USD/IDR exchange rate" xAxisTitle="Date" yAxisTitle="IDR per USD"/>
 
-## Governed metrics (dbt Semantic Layer)
+## Governed metrics · Metrik tata kelola
 
 These series are not hand-written SQL - they come from **one canonical definition** in the dbt metric registry (`_marts__semantic.yml`), compiled to the `sl_metrics_daily` view by `semantic/compile_metrics.py`. Dashboard, docs, and any future consumer must agree because there is only one place the math lives.
 
@@ -53,7 +55,7 @@ where metric_name = 'avg_palm_price_idr'
 order by metric_time
 ```
 
-<LineChart data={sl_price} x=metric_time y=palm_price_idr yAxisTitle="IDR / tonne (governed metric)"/>
+<LineChart data={sl_price} x=metric_time y=palm_price_idr title="Governed palm price (IDR per tonne)" xAxisTitle="Date" yAxisTitle="IDR / tonne"/>
 
 ```sql sl_share
 select metric_time, region_key, metric_value as harvest_share
@@ -62,6 +64,6 @@ where metric_name = 'effective_harvest_share'
 order by metric_time
 ```
 
-<LineChart data={sl_share} x=metric_time series=region_key y=harvest_share yAxisTitle="share of days that are effective harvest days"/>
+<LineChart data={sl_share} x=metric_time series=region_key y=harvest_share title="Effective harvest-day share by region" xAxisTitle="Date" yAxisTitle="Share of days (0–1)" yFmt="num2"/>
 
 Pricing, FX, operations value, and the harvest-day share all resolve to the same governed definitions - see the [Methodology](/methodology) for the registry → compiler → view pipeline.
