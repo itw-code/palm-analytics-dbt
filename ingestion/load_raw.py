@@ -66,6 +66,21 @@ def resolve_end_date(cli_end_date: str | None) -> dt.date:
     return DEFAULT_END_DATE
 
 
+def resolve_window_days(cli_window_days: int, end_date: dt.date) -> int:
+    """Multi-year backfill: PALM_START_DATE=YYYY-MM-DD overrides --window-days.
+
+    The Pink Sheet parser reads full history (1960->present), so e.g.
+    PALM_START_DATE=2020-01-01 pulls ~5.5y of weather/FX + all commodity
+    months in range. CLI --window-days wins only when explicitly passed
+    (argparse default equals WINDOW_DAYS, so env is checked first).
+    """
+    env = os.getenv("PALM_START_DATE")
+    if env and cli_window_days == WINDOW_DAYS:
+        start = dt.date.fromisoformat(env)
+        return max(1, (end_date - start).days + 1)
+    return cli_window_days
+
+
 def date_range(days: int, end_date: dt.date) -> list[dt.date]:
     return [end_date - dt.timedelta(days=i) for i in range(days - 1, -1, -1)]
 
@@ -228,23 +243,97 @@ def synth_holidays(years) -> list[dict]:
 
 
 # --------------------------------------------------------------------------- commodity (World Bank)
-WB_XLSX = "https://thedocs.worldbank.org/en/doc/18675f1d1639c7a34d463f59263ba0a2-0050012025/related/CMO-Historical-Data-Monthly.xlsx"
+# Pink Sheet "Monthly Prices" sheet layout (verified against live file 2026-09-02):
+#   row 5 (1-indexed): header names, e.g. col W="Palm oil", col Z="Soybean oil"
+#   row 6: units, both "($/mt)" -> already USD/tonne, no conversion
+#   row 7+: data, col A period as "YYYYMmm" (e.g. "2026M08"), "..." marks missing
+# Columns are located by header NAME (not fixed index) so future sheet edits
+# don't silently shift the series. Full history (1960->present) is parsed, so a
+# multi-year backfill is a one-flag run: --window-days 1825 (or PALM_START_DATE).
+WB_XLSX_CANDIDATES = [
+    # Pin the newest known-good edition first; fall back to older editions then
+    # the commodity-markets page pointer. Override all via PALM_PINK_SHEET_URL.
+    "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Monthly.xlsx",
+    "https://thedocs.worldbank.org/en/doc/18675f1d1639c7a34d463f59263ba0a2-0050012025/related/CMO-Historical-Data-Monthly.xlsx",
+]
+WB_XLSX = WB_XLSX_CANDIDATES[0]
+PALM_OIL_LABELS = {"palm oil"}
+SOYBEAN_OIL_LABELS = {"soybean oil", "soyabean oil", "soya bean oil"}
+
+
+def _parse_pink_period(raw: str) -> dt.date | None:
+    """'YYYYMmm' -> first-of-month date. Returns None for anything else."""
+    try:
+        year_s, mon_s = str(raw).strip().split("M")
+        return dt.date(int(year_s), int(mon_s), 1)
+    except (ValueError, AttributeError):
+        return None
+
+
+def _parse_pink_workbook(content: bytes, months: list[dt.date] | None = None) -> list[dict]:
+    """Parse Pink Sheet xlsx bytes -> [{price_month, commodity, usd_per_tonne}]."""
+    import io
+    import openpyxl
+    wb = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
+    if "Monthly Prices" not in wb.sheetnames:
+        raise ValueError(f"'Monthly Prices' sheet missing; have: {wb.sheetnames}")
+    ws = wb["Monthly Prices"]
+    rows = list(ws.iter_rows(values_only=True))
+    header = [str(c).strip().lower() if c is not None else "" for c in rows[4]]
+    try:
+        palm_col = next(i for i, h in enumerate(header) if h in PALM_OIL_LABELS)
+        soy_col = next(i for i, h in enumerate(header) if h in SOYBEAN_OIL_LABELS)
+    except StopIteration:
+        raise ValueError(f"palm/soybean oil columns not found in header: {header[:30]}")
+    want = set(months) if months else None
+    out: list[dict] = []
+    for r in rows[6:]:
+        m = _parse_pink_period(r[0]) if r[0] is not None else None
+        if m is None or (want is not None and m not in want):
+            continue
+        for col, name in ((palm_col, "palm_oil"), (soy_col, "soybean_oil")):
+            v = r[col]
+            if v is None or (isinstance(v, str) and v.strip() in ("", "...", "…", "..", "-")):
+                continue
+            try:
+                price = float(v)
+            except (TypeError, ValueError):
+                continue
+            if not (math.isfinite(price) and price > 0):
+                continue
+            out.append({"price_month": m.isoformat(), "commodity": name,
+                        "usd_per_tonne": round(price, 2)})
+    if not out:
+        raise ValueError("Pink Sheet parse produced 0 rows (layout changed?)")
+    return out
 
 
 def fetch_commodity_live(months) -> list[dict] | None:
-    """Best-effort World Bank Pink Sheet (monthly xlsx). Returns None on any failure
-    (unstable URL / no openpyxl) so the caller uses the synthetic series."""
-    try:
-        import io
-        import openpyxl  # optional dependency
-        r = requests.get(WB_XLSX, timeout=30)
-        r.raise_for_status()
-        wb = openpyxl.load_workbook(io.BytesIO(r.content), read_only=True, data_only=True)
-        # Parsing the multi-header Monthly Prices sheet is intentionally left as a hook;
-        # returning None keeps the pipeline deterministic until a parser is wired.
-        return None
-    except Exception:
-        return None
+    """Live World Bank Pink Sheet fetch with retry + URL fallback.
+
+    Tries each known xlsx edition URL (or PALM_PINK_SHEET_URL override) with
+    fetch_with_retry; returns None only when every URL fails so the caller can
+    use the synthetic series. Raises only for a hard parse failure (sheet
+    present but unreadable) — surfaced via manifest error.
+    """
+    urls = [os.getenv("PALM_PINK_SHEET_URL")] if os.getenv("PALM_PINK_SHEET_URL") else list(WB_XLSX_CANDIDATES)
+    urls = [u for u in urls if u]
+    last_exc: Exception | None = None
+    for url in urls:
+        try:
+            def _get(u=url):
+                r = requests.get(u, timeout=60)
+                r.raise_for_status()
+                if not r.content.startswith(b"PK"):
+                    raise ValueError(f"URL did not return an xlsx file (HTTP {r.status_code}, {len(r.content)} bytes)")
+                return r.content
+            content = fetch_with_retry(_get, label="commodity:download")
+            return _parse_pink_workbook(content, months)
+        except Exception as e:
+            last_exc = e
+            print(f"[commodity] URL failed ({url}): {e.__class__.__name__}: {e}", file=sys.stderr)
+    print(f"[commodity] all Pink Sheet URLs failed ({last_exc})", file=sys.stderr)
+    return None
 
 
 def synth_commodity(months) -> list[dict]:
@@ -283,16 +372,16 @@ def main() -> int:
     allow_synthetic = not require_live
 
     end_date = resolve_end_date(args.end_date)
-    dates = date_range(args.window_days, end_date)
+    window_days = resolve_window_days(args.window_days, end_date)
+    dates = date_range(window_days, end_date)
     # Forecast is ALWAYS relative to real today (prescriptive), history stays pinned for determinism
     _today = dt.date.today()
     forecast_dates = [_today + dt.timedelta(days=i) for i in range(1, FORECAST_WINDOW + 1)]
     years = sorted({d.year for d in dates} | {d.year for d in forecast_dates})
     months = month_starts(dates)
-    # Commodity is monthly + always synthetic until the World Bank parser is wired.
-    # If months derives from the pinned window alone, max(price_month) freezes
-    # (e.g. 2026-06-01) while wall-clock advances -> recurring freshness ERROR.
-    # Union today's month so the synthetic series stays current on every run.
+    # Commodity is monthly. Union today's month so the series stays current on
+    # every run (a pinned window alone would freeze max(price_month) while
+    # wall-clock advances -> recurring freshness ERROR).
     _this_month = dt.date(_today.year, _today.month, 1)
     if _this_month not in months:
         months.append(_this_month)
@@ -301,7 +390,7 @@ def main() -> int:
     provenance: dict = {
         "generated_at": dt.datetime.utcnow().isoformat() + "Z",
         "end_date": end_date.isoformat(),
-        "window_days": args.window_days,
+        "window_days": window_days,
         "require_live": require_live,
         "sources": {},
     }
@@ -381,19 +470,18 @@ def main() -> int:
         print(f"[holidays] synthetic fallback ({e.__class__.__name__}: {e})", file=sys.stderr)
         provenance["sources"]["holidays"] = {"mode": "synthetic", "rows": len(holidays), "error": f"{e.__class__.__name__}: {e}"}
 
-    # commodity
+    # commodity (live Pink Sheet; synthetic only as loud fallback)
     commodity = fetch_commodity_live(months)
     if commodity is None:
         if require_live:
-            print("[commodity] live source not wired (parser stub) and --require-live set", file=sys.stderr)
-            provenance["sources"]["commodity"] = {"mode": "failed", "error": "parser not wired - World Bank xlsx parsing stub returns None"}
+            print("[commodity] live fetch failed and --require-live set", file=sys.stderr)
+            provenance["sources"]["commodity"] = {"mode": "failed", "error": "all Pink Sheet URLs failed (see log)"}
             _write_manifest(args.manifest, provenance, synth_count, status="failed")
             return 1
         commodity = synth_commodity(months)
         synth_count += 1
-        # Distinguish known stub limitation from transient API failure
-        print("[commodity] synthetic (World Bank parser stub - known limitation; synthetic series used)", file=sys.stderr)
-        provenance["sources"]["commodity"] = {"mode": "synthetic", "rows": len(commodity), "error": "parser not wired - synthetic fallback (known limitation)"}
+        print("[commodity] synthetic fallback (all Pink Sheet URLs unreachable; see log)", file=sys.stderr)
+        provenance["sources"]["commodity"] = {"mode": "synthetic", "rows": len(commodity), "error": "all Pink Sheet URLs failed"}
     else:
         print(f"[commodity] live OK ({len(commodity)} rows)")
         provenance["sources"]["commodity"] = {"mode": "live", "rows": len(commodity)}
@@ -455,9 +543,9 @@ def main() -> int:
         # Never silent: emit a banner that survives in logs and is detectable by CI.
         print(f"\n::warning::[ingestion] {synth_count} source(s) used SYNTHETIC fallback - see {args.manifest} for provenance. "
               "In production (scheduled runs) this should be investigated; pass --require-live to fail-fast.", file=sys.stderr)
-        # Also surface commodity stub note
+        # Also surface commodity fallback note
         if provenance["sources"].get("commodity", {}).get("mode") == "synthetic":
-            print("::notice::[ingestion] commodity price is ALWAYS synthetic until World Bank parser is wired (known limitation).", file=sys.stderr)
+            print("::notice::[ingestion] commodity price fell back to synthetic (Pink Sheet unreachable).", file=sys.stderr)
 
     return 0
 
