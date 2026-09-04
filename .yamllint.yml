@@ -1,0 +1,21 @@
+# yamllint config for palm-analytics-dbt.
+# Run via pre-commit (yamllint hook) or: yamllint -c .yamllint.yml .
+extends: default
+
+ignore: |
+  target/
+  dbt_packages/
+  palm_lake/
+  dashboard/build/
+  dashboard/node_modules/
+  logs/
+
+rules:
+  line-length:
+    max: 140
+  truthy:
+    # check-keys: false keeps the `on:` trigger key in GitHub workflows valid.
+    allowed-values: ["true", "false"]
+    check-keys: false
+  comments:
+    min-spaces-from-content: 1

@@ -1,0 +1,11 @@
+# Build context keep-list: source, models, seeds, macros; never baked artifacts.
+.venv/
+target/
+dbt_packages/
+logs/
+palm.duckdb
+palm_lake/
+dashboard/build/
+dashboard/node_modules/
+ingestion_manifest.json
+.git/

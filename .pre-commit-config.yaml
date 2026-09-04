@@ -1,0 +1,51 @@
+repos:
+  # Standard hygiene: whitespace, EOF, valid YAML, no giant blobs, no merge markers.
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+
+  # YAML style for dbt properties, workflows, Evidence sources.
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.37.1
+    hooks:
+      - id: yamllint
+        files: \.ya?ml$
+        args: [-c, .yamllint.yml]
+
+  # SQL style. Uses the dbt templater so {{ ref() }} / {{ source() }} resolve
+  # against the real project; dbt itself must be installed in the environment
+  # that runs pre-commit (local `make setup`, CI lint job installs
+  # requirements.txt first). Dialect/templater pinned in .sqlfluff.
+  - repo: https://github.com/sqlfluff/sqlfluff
+    rev: 3.1.0
+    hooks:
+      - id: sqlfluff-lint
+        files: ^(models|macros|tests|snapshots|analyses)/.*\.sql$
+        additional_dependencies: ['dbt-core==1.12.3', 'dbt-duckdb==1.10.1', 'duckdb==1.4.4']
+
+  # dbt project conventions. Pure YAML/SQL checks only — no warehouse needed.
+  # (dbt parse / dbt build / docs generate already run in CI.)
+  - repo: https://github.com/dbt-checkpoint/dbt-checkpoint
+    rev: v1.2.1
+    hooks:
+      - id: check-model-has-properties-file
+        files: ^models/
+      - id: check-model-has-description
+        files: ^models/
+      - id: check-model-columns-have-desc
+        files: ^models/marts/
+      - id: check-model-has-tests
+        files: ^models/
+        args: ["--test-cnt", "2", "--"]
+      - id: check-script-semicolon
+        files: ^(models|macros)/
+      - id: check-script-has-no-table-name
+        files: ^(models|macros)/
+
+exclude: ^(target|dbt_packages|palm_lake|dashboard/build|logs)/

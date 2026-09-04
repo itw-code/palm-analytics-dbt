@@ -1,0 +1,23 @@
+{
+  "name": "palm-analytics-dbt",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["mtxr.sqltools", "redhat.vscode-yaml", "esbenp.prettier-vscode"]
+    }
+  },
+  "postCreateCommand": "pip install -r requirements.txt && pip install pre-commit && dbt deps && pre-commit install",
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "Evidence dev server",
+      "onAutoForward": "ignore"
+    }
+  },
+  "remoteUser": "vscode"
+}
