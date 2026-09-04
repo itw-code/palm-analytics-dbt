@@ -1,0 +1,28 @@
+name: Bug report
+description: Something in the pipeline or dashboard is wrong
+labels: [needs-triage]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you saw vs what you expected. Include the page or model name.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction steps
+      description: Commands run, branch, and inputs (e.g. PALM_USE_LIVE_DATE, --require-live).
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Paste the failing CI step / dbt error, or link the run. For dashboard issues, note the /status page freshness line.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [ingestion, dbt models/tests, semantic layer, Evidence dashboard, CI/CD, docs]

@@ -1,0 +1,27 @@
+name: Feature request
+description: Propose a model, page, or pipeline improvement
+labels: [needs-triage]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / user story
+      description: Who benefits and what decision does this improve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: Models, pages, or workflow steps affected. Note if it touches the shared agronomy macro or the semantic registry (generated-file rule applies).
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      options: [new mart/metric, dashboard page, ingestion source, CI/ops, docs/portfolio, other]
+  - type: checkboxes
+    id: notes
+    attributes:
+      label: Acknowledgements
+      options:
+        - label: I checked the Roadmap in the README and this isn't already listed

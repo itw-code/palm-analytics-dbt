@@ -1,0 +1,27 @@
+name: Data issue
+description: Stale, missing, or suspicious data on the dashboard
+labels: [needs-triage]
+body:
+  - type: textarea
+    id: symptom
+    attributes:
+      label: Symptom
+      description: Which page/metric looks wrong, and since when?
+    validations:
+      required: true
+  - type: textarea
+    id: status
+    attributes:
+      label: /status snapshot
+      description: Paste the generated_at, lake snapshot id, dbt PASS counts, and freshness line from the status page (or status.json).
+    validations:
+      required: true
+  - type: dropdown
+    id: source
+    attributes:
+      label: Suspected source
+      options: [Open-Meteo weather, Open-Meteo forecast, Frankfurter FX, Nager.Date holidays, World Bank commodity, not sure]
+  - type: input
+    id: run
+    attributes:
+      label: Failing or suspect CI run (URL, if any)
