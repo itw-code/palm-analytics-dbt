@@ -15,10 +15,19 @@ models:
       - name: region_key
         tests: [not_null, unique]
       - name: island
+        tests: [not_null]
+      - name: latitude
         tests:
-          - accepted_values:
+          - dbt_utils.accepted_range:
               arguments:
-                values: ['Sumatra', 'Kalimantan']
+                min_value: -11
+                max_value: 6
+      - name: longitude
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 95
+                max_value: 141
       - name: planted_hectares
         tests: [non_negative]
 

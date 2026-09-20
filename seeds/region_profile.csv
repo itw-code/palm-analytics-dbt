@@ -1,4 +1,5 @@
-region_key,planted_hectares,yield_t_ha,estate_manager
-riau,12500,21.5,Andi Pratama
-north_sumatra,9800,19.8,Sri Wahyuni
-central_kalimantan,15200,18.2,Budi Santoso
+region_key,planted_hectares,yield_t_ha,estate_manager,latitude,longitude,island
+riau,12500,21.5,Andi Pratama,0.51,101.45,Sumatra
+north_sumatra,9800,19.8,Sri Wahyuni,3.59,98.67,Sumatra
+central_kalimantan,15200,18.2,Budi Santoso,-1.68,113.38,Kalimantan
+lampung,7400,20.1,Dewi Lestari,-5.45,105.26,Sumatra

@@ -2,3 +2,4 @@ region_key,fertilizer_cost_idr_per_ha,harvest_cost_idr_per_ha,transport_cost_idr
 riau,850000,620000,145000,0.22,"Fertilizer amortized per effective harvest day; adjust to your estate's actuals"
 north_sumatra,780000,590000,150000,0.22,"North Sumatra: slightly lower fertilizer due to soil"
 central_kalimantan,920000,650000,155000,0.21,"Kalimantan: higher transport, slightly lower extraction"
+lampung,820000,600000,148000,0.22,"Lampung: southern Sumatra estate"

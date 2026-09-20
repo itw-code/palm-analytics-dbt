@@ -1,4 +1,4 @@
--- Conformed region dimension, enriched with seeded estate profile (planted ha, yield, manager).
+-- Conformed region dimension, enriched with seeded estate profile (location, planted ha, yield, manager).
 with regions as (
     select distinct region from {{ ref('stg_weather') }}
 ),
@@ -12,10 +12,9 @@ select
             string_split(replace(r.region, '_', ' '), ' '),
             w -> upper(substr(w, 1, 1)) || substr(w, 2)
         ), ' ')                                         as region_name,
-    case
-        when r.region ilike '%kalimantan%' then 'Kalimantan'
-        else 'Sumatra'
-    end                                                 as island,
+    coalesce(p.island, 'Indonesia')                     as island,
+    p.latitude,
+    p.longitude,
     p.planted_hectares,
     p.yield_t_ha,
     p.estate_manager

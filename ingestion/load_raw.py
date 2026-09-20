@@ -39,6 +39,46 @@ LAKE_DATA = f"{LAKE_DIR}/data"
 LAKE_ALIAS = "palm_raw"
 MANIFEST_DEFAULT = "ingestion_manifest.json"
 
+def _repo_root() -> str:
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def _read_region_csv(path: str) -> dict[str, dict]:
+    """Read estate regions from a CSV with columns:
+    region_key, planted_hectares, yield_t_ha, estate_manager, latitude, longitude, island.
+    latitude/longitude are REQUIRED so every estate is location-pinned."""
+    import csv
+    out: dict[str, dict] = {}
+    with open(path, newline="", encoding="utf-8-sig") as f:
+        for row in csv.DictReader(f):
+            key = (row.get("region_key") or "").strip().lower().replace(" ", "_")
+            if not key:
+                continue
+            if key in out:
+                raise SystemExit(f"[regions] duplicate region_key '{key}' in {path}")
+            try:
+                lat = float(row["latitude"])
+                lon = float(row["longitude"])
+            except (KeyError, TypeError, ValueError):
+                raise SystemExit(f"[regions] {key}: latitude/longitude are required in {path}")
+            if not (-11.0 <= lat <= 6.0 and 95.0 <= lon <= 141.0):
+                raise SystemExit(
+                    f"[regions] {key}: ({lat}, {lon}) is outside Indonesia "
+                    f"(lat -11..6, lon 95..141) - check {path}")
+            out[key] = {"lat": lat, "lon": lon, "island": (row.get("island") or "Indonesia").strip()}
+    if not out:
+        raise SystemExit(f"[regions] no regions found in {path}")
+    return out
+
+
+def load_regions(cli_path: str | None) -> dict[str, dict]:
+    """Region registry: --regions CSV wins, else PALM_REGIONS env, else seeds/region_profile.csv."""
+    path = cli_path or os.getenv("PALM_REGIONS") or os.path.join(_repo_root(), "seeds", "region_profile.csv")
+    regions = _read_region_csv(path)
+    print(f"[regions] {len(regions)} estate(s) from {path}: {', '.join(regions)}")
+    return regions
+
+
 REGIONS = {
     "riau":                (0.51, 101.45),
     "north_sumatra":       (3.59, 98.67),
@@ -365,8 +405,10 @@ def main() -> int:
     ap.add_argument("--manifest", default=MANIFEST_DEFAULT, help="Path to write ingestion manifest JSON")
     ap.add_argument("--end-date", default=None, help="Override end date (YYYY-MM-DD); default 2026-06-30 or PALM_END_DATE / PALM_USE_LIVE_DATE")
     ap.add_argument("--window-days", type=int, default=WINDOW_DAYS, help="Number of days to ingest")
+    ap.add_argument("--regions", default=None, help="Path to estate registry CSV (default: PALM_REGIONS env or seeds/region_profile.csv)")
     args = ap.parse_args()
 
+    REGIONS = {k: (v["lat"], v["lon"]) for k, v in load_regions(args.regions).items()}
     require_live = args.live_only or args.require_live
     # --require-live takes precedence over --allow-synthetic
     allow_synthetic = not require_live

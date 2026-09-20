@@ -1,5 +1,6 @@
 ---
 title: Methodology & Data Lineage
+description: How the pipeline works — sources, dbt layers, semantic metrics, and engineering practices.
 ---
 
 This dashboard is the serving layer of an end-to-end analytics-engineering pipeline. It is deliberately built with the industry-standard toolchain to demonstrate the full workflow, not just charts.
@@ -40,9 +41,15 @@ All ingestion attempts a live fetch with retries and falls back to deterministic
 
 The dashboard's [7-Day Forward Planner](/forecast) extends the same agronomy rules into the forecast window (H+1 → H+7). Raw forecast lands in DuckLake as `raw_weather_forecast` alongside the historical archive, the date spine extends to cover it, and the forecast mart assumes prices flat at the latest known value - honest about what is forecast vs known. Check the decision with hindsight the next morning.
 
-## The decision it supports
+## Add your estate (Indonesia only)
 
-*Given today's weather and the palm price (in local currency), which estate operations - fertilize, harvest, spray - are favorable in each region, and what is a good harvest day worth?* An **effective harvest day** additionally requires that labour is available (not a weekend or public holiday).
+Regions are not hardcoded — the estate registry is `seeds/region_profile.csv`. To track your own estate:
+
+1. Add one row to `seeds/region_profile.csv` (`region_key`, `planted_hectares`, `yield_t_ha`, `estate_manager`, `latitude`, `longitude`, `island`) **and** a matching cost row to `seeds/cost_assumptions.csv`. Coordinates are required and must fall inside Indonesia (lat −11…6, lon 95…141) — ingestion rejects anything outside with a loud error.
+2. Run `python ingestion/load_raw.py` (reads the registry; `--regions other.csv` or `PALM_REGIONS=other.csv` overrides it) then `dbt build --profiles-dir .`.
+3. The build fails loudly if a region lacks a cost row (`assert_margin_covers_all_regions`) — margin figures must never silently drop an estate.
+
+## The decision it supports
 
 ## Automation & observability
 

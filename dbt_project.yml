@@ -33,6 +33,15 @@ models:
 
 seeds:
   palm_analytics:
-    +column_types:
-      planted_hectares: double
-      yield_t_ha: double
+    region_profile:
+      +column_types:
+        planted_hectares: double
+        yield_t_ha: double
+        latitude: double
+        longitude: double
+    cost_assumptions:
+      +column_types:
+        fertilizer_cost_idr_per_ha: double
+        harvest_cost_idr_per_ha: double
+        transport_cost_idr_per_tonne: double
+        extraction_rate: double
