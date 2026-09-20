@@ -1,5 +1,6 @@
 ---
 title: 7-Day Forward Planner
+description: Prescriptive 7-day outlook — what to do next per region, with harvest-day recommendations.
 ---
 
 Prescriptive outlook for the next 7 days · Prakiraan 7 hari — not what *happened*, but what to *do next*. Forecast weather comes from **Open-Meteo Forecast** (or Historical-Forecast for deterministic CI), with the same agronomy rules as the historical planner. Prices are carried forward at the latest known value.
@@ -12,13 +13,7 @@ select min(forecast_date) as next_date, max(forecast_date) as end_date, count(*)
 
 <Alert status="info">Showing forecast <Value data={forecast_freshness} column=next_date fmt="yyyy-mm-dd"/> → <Value data={forecast_freshness} column=end_date fmt="yyyy-mm-dd"/> (<Value data={forecast_freshness} column=rows/> region-days). Prices assumed flat at last known value.</Alert>
 
-```sql regions_list
-select region_key, region_name from palm.region order by region_name
-```
-
-<Dropdown name=region data={regions_list} value=region_key label=region_name title="Region" defaultValue="%">
-    <DropdownOption valueLabel="All regions" value="%" />
-</Dropdown>
+{@partial "region_filter.md"}
 
 ```sql forecast_table
 select
@@ -49,7 +44,7 @@ where region_key like '${inputs.region.value}'
 ```
 
 <Grid cols=3>
-  <BigValue data={forecast_summary} value=effective_harvest_days title="Effective harvest days · Hari panen"/>
+  <BigValue data={forecast_summary} value=effective_harvest_days title="Effective harvest days · Hari panen efektif"/>
   <BigValue data={forecast_summary} value=spray_days title="Spray days · Hari semprot"/>
   <BigValue data={forecast_summary} value=fertilize_days title="Fertilize days · Hari pupuk"/>
 </Grid>

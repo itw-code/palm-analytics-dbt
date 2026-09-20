@@ -1,26 +1,15 @@
 ---
 title: Operations Planner
+description: Per-region daily operating guidance — effective harvest days, spray and fertilize windows.
 ---
 
 Per-region daily operating guidance · Panduan operasi harian per wilayah. An **effective harvest day** is a harvest-favorable day that is not a weekend or an Indonesian public holiday (labour is available).
 
 *Drill-down: [National](/ ) → **Region · Wilayah** (this page, filter below) → Day · Hari (table) → [Operation · Tindakan](/forecast).*
 
-```sql ops_freshness
-select max(operation_date) as as_of, datediff('day', max(operation_date), current_date) as days_stale from palm.operations_daily
-```
+{@partial "ops_freshness.md"}
 
-{#if ops_freshness[0].days_stale > 3}
-<Alert status="warning">Data is <Value data={ops_freshness} column=days_stale/> days stale (last refresh <Value data={ops_freshness} column=as_of fmt="yyyy-mm-dd"/>). Treat recommendations with caution.</Alert>
-{/if}
-
-```sql regions_list
-select region_key, region_name from palm.region order by region_name
-```
-
-<Dropdown name=region data={regions_list} value=region_key label=region_name title="Region" defaultValue="%">
-    <DropdownOption valueLabel="All regions" value="%" />
-</Dropdown>
+{@partial "region_filter.md"}
 
 ```sql planner
 select
@@ -50,12 +39,12 @@ where region_key like '${inputs.region.value}'
 ```
 
 <Grid cols=3>
-  <BigValue data={planner_summary} value=effective_harvest_days title="Effective harvest days · Hari panen"/>
+  <BigValue data={planner_summary} value=effective_harvest_days title="Effective harvest days · Hari panen efektif"/>
   <BigValue data={planner_summary} value=spray_days title="Spray days · Hari semprot"/>
   <BigValue data={planner_summary} value=fertilize_days title="Fertilize days · Hari pupuk"/>
 </Grid>
 
-*Showing dates through <Value data={ops_freshness} column=as_of fmt="yyyy-mm-dd"/> — filter by region above.*
+*Showing dates through <Value data={freshness} column=as_of fmt="yyyy-mm-dd"/> — filter by region above.*
 
 ## Daily recommendations · Rekomendasi harian
 

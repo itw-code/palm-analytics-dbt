@@ -1,5 +1,6 @@
 ---
 title: Commodity Market
+description: Palm vs soybean oil prices, substitution spread, and USD/IDR exchange rate.
 ---
 
 Palm oil does not trade in isolation - **soybean oil** is its closest substitute, so the palm-vs-soy spread drives buyer switching, and the USD/IDR rate decides what a USD-quoted price is actually worth to an Indonesian estate.
@@ -24,25 +25,25 @@ limit 1
 ```
 
 <Grid cols=2>
-  <BigValue data={market_now} value=palm_oil_usd fmt="usd0" title="Palm oil · Minyak sawit (USD/t)"/>
-  <BigValue data={market_now} value=soybean_oil_usd fmt="usd0" title="Soybean oil · Minyak kedelai (USD/t)"/>
-  <BigValue data={market_now} value=palm_soy_spread_usd fmt="usd0" title="Palm − Soy spread · Selisih (USD/t)"/>
+  <BigValue data={market_now} value=palm_oil_usd fmt="$#,##0" title="Palm oil · Minyak sawit (USD/t)"/>
+  <BigValue data={market_now} value=soybean_oil_usd fmt="$#,##0" title="Soybean oil · Minyak kedelai (USD/t)"/>
+  <BigValue data={market_now} value=palm_soy_spread_usd fmt="$#,##0" title="Palm − Soy spread · Selisih (USD/t)"/>
   <BigValue data={market_now} value=usd_idr fmt="#,##0" title="USD/IDR · Kurs (IDR)"/>
 </Grid>
 
 ## Palm vs soybean oil · Sawit vs kedelai
 
-<LineChart data={market} x=price_date y={['palm_oil_usd','soybean_oil_usd']} title="Palm vs soybean oil price" xAxisTitle="Date" yAxisTitle="USD / tonne"/>
+<LineChart data={market} x=price_date y={['palm_oil_usd','soybean_oil_usd']} title="Palm vs soybean oil price" xAxisTitle="Date" yAxisTitle="USD / tonne" yFmt="$#,##0"/>
 
 ## Palm − soybean substitution spread · Selisih substitusi
 
 A negative spread means palm trades at a discount to soybean oil (palm looks attractive to buyers).
 
-<LineChart data={market} x=price_date y=palm_soy_spread_usd title="Palm minus soybean spread" xAxisTitle="Date" yAxisTitle="USD / tonne"/>
+<LineChart data={market} x=price_date y=palm_soy_spread_usd title="Palm minus soybean spread" xAxisTitle="Date" yAxisTitle="USD / tonne" yFmt="$#,##0"/>
 
 ## USD/IDR exchange rate · Kurs
 
-<LineChart data={market} x=price_date y=usd_idr title="USD/IDR exchange rate" xAxisTitle="Date" yAxisTitle="IDR per USD"/>
+<LineChart data={market} x=price_date y=usd_idr title="USD/IDR exchange rate" xAxisTitle="Date" yAxisTitle="IDR per USD" yFmt="#,##0"/>
 
 ## Governed metrics · Metrik tata kelola
 

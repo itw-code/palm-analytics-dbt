@@ -1,5 +1,6 @@
 ---
 title: Trust & Data Health
+description: Pipeline trust ledger — freshness, dbt results, lake snapshots, and margin assumptions.
 ---
 
 How this dashboard is built, tested, and monitored — the trust ledger · Kepercayaan & kesehatan data. Updated on every run.
@@ -9,7 +10,7 @@ select * from palm.status
 ```
 
 {#if status[0].freshness_status == 'error'}
-<Alert status="danger" title="Source freshness: ERROR">Some raw sources are stale beyond the error threshold. Check the freshness summary below and the Actions tab.</Alert>
+<Alert status="negative" title="Source freshness: ERROR">Some raw sources are stale beyond the error threshold. Check the freshness summary below and the Actions tab.</Alert>
 {:else if status[0].freshness_status == 'warn'}
 <Alert status="warning" title="Source freshness: WARN">At least one source is past its warn threshold (expected in CI with the pinned fixture). Live deploys are fresh — see generated_at.</Alert>
 {:else}

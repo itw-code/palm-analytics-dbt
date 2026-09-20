@@ -1,18 +1,13 @@
 ---
 title: Margin per Hectare
+description: P&L per hectare by region and day — revenue, costs, and margin from governed price and yield.
 ---
 
 P&L per hectare · Laba-rugi per hektar, derived from the same price + yield + extraction rate that powers the operations planner, minus your seeded cost assumptions. On non-effective days you still carry fertilizer cost. Replace `seeds/cost_assumptions.csv` with your estate's actuals and every number recomputes.
 
-*Drill-down: [National](/) → [Region](/operations) → [Day](/operations) → **Operation value · Nilai tindakan** (this page).*
+*Drill-down: [National](/) → [Region](/operations) → [Day](/operations) → **Margin value · Nilai marjin** (this page).*
 
-```sql regions_list
-select region_key, region_name from palm.region order by region_name
-```
-
-<Dropdown name=region data={regions_list} value=region_key label=region_name title="Region" defaultValue="%">
-    <DropdownOption valueLabel="All regions" value="%" />
-</Dropdown>
+{@partial "region_filter.md"}
 
 ```sql margin_recent
 select
