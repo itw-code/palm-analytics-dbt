@@ -5,8 +5,9 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        display: ['"Iowan Old Style"', 'Palatino', 'Georgia', 'serif'],
-        sans: ['system-ui', '-apple-system', '"Segoe UI"', 'Inter', 'sans-serif'],
+        display: ['Georgia', '"Iowan Old Style"', 'Palatino', 'serif'],
+        sans: ['Inter', 'system-ui', '-apple-system', '"Segoe UI"', 'sans-serif'],
+        mono: ['"IBM Plex Mono"', 'ui-monospace', 'monospace'],
       },
     },
   },

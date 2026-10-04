@@ -1,54 +1,54 @@
 appearance:
-  default: system
+  default: light
   switcher: true
 
 theme:
   colorPalettes:
     default:
       light:
-        - "#1B4332"
-        - "#2D6A4F"
-        - "#D9A441"
-        - "#8B5E34"
-        - "#5C8A6A"
-        - "#C9B896"
+        - "#1F7A80"
+        - "#8C4A6B"
+        - "#3F6B52"
+        - "#7A5F28"
+        - "#5B636B"
+        - "#C9C1B2"
       dark:
-        - "#8FC1A9"
-        - "#52B788"
-        - "#E8A838"
-        - "#C9B896"
-        - "#40916C"
-        - "#D9A441"
+        - "#7EB8BC"
+        - "#C489A4"
+        - "#8FBF9C"
+        - "#D4B46A"
+        - "#A8B0B6"
+        - "#8C4A6B"
   colorScales:
     default:
       light:
-        - "#EDF2E7"
-        - "#1B4332"
+        - "#F7F4EE"
+        - "#1F7A80"
       dark:
-        - "#132019"
-        - "#8FC1A9"
+        - "#0F141A"
+        - "#7EB8BC"
   colors:
     primary:
-      light: "#1B4332"
-      dark: "#8FC1A9"
+      light: "#1F7A80"
+      dark: "#7EB8BC"
     accent:
-      light: "#B45309"
-      dark: "#E8A838"
+      light: "#8C4A6B"
+      dark: "#C489A4"
     base:
-      light: "#FAF7F0"
-      dark: "#101613"
+      light: "#F7F4EE"
+      dark: "#0F141A"
     info:
-      light: "#1D6FA5"
-      dark: "#7DD3FC"
+      light: "#1F7A80"
+      dark: "#7EB8BC"
     positive:
-      light: "#2D6A4F"
-      dark: "#4ADE80"
+      light: "#3F6B52"
+      dark: "#8FBF9C"
     warning:
-      light: "#92600A"
-      dark: "#FBBF24"
+      light: "#7A5F28"
+      dark: "#D4B46A"
     negative:
-      light: "#B3261E"
-      dark: "#F87171"
+      light: "#9B4A44"
+      dark: "#E09A94"
 
 plugins:
   components:

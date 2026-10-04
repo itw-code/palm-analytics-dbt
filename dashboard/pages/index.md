@@ -7,34 +7,34 @@ description: Keputusan pagi buat kebun sawit Indonesia — kapan mupuk, manen, a
 
 {#if inputs.lang.value == 'en'}
 
-<div style="display:flex;gap:28px;align-items:center;flex-wrap:wrap;border-left:4px solid #B45309;padding-left:20px;margin:8px 0 4px 0;">
+<div style="display:flex;gap:28px;align-items:center;flex-wrap:wrap;border-left:3px solid #1F7A80;padding-left:20px;margin:8px 0 4px 0;">
 <div style="flex:1 1 320px;min-width:260px;">
-<p style="letter-spacing:0.14em;font-size:12px;font-weight:700;color:#B45309;margin:0 0 8px 0;">PALM ESTATE OPERATIONS · INDONESIA</p>
+<p style="letter-spacing:0.14em;font-size:12px;font-weight:700;color:#1F7A80;margin:0 0 8px 0;">PALM ESTATE OPERATIONS · INDONESIA</p>
 <p style="font-family:Georgia,'Palatino Linotype',serif;font-size:clamp(24px,3.4vw,34px);line-height:1.25;font-weight:700;margin:0 0 10px 0;">Every morning at 06:00 WIB, an estate manager decides: fertilize, harvest, or spray — per region.</p>
 <p style="font-size:15px;line-height:1.6;margin:0 0 10px 0;">A wrong day wastes fertilizer, loses yield, and idles labour. This page turns today's weather, price, and labour availability into a go/no-go per region — and prices what a good harvest day is worth.</p>
 <p style="font-size:13px;opacity:0.75;margin:0 0 14px 0;">Open-Meteo + Frankfurter + Nager.Date + World Bank → DuckDB → dbt → this page. Refreshed daily.</p>
-<a href="/forecast" style="display:inline-block;background:#1B4332;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">Open the 7-day plan →</a>
+<a href="/forecast" style="display:inline-block;background:#1F7A80;color:#F7F4EE;padding:10px 18px;border-radius:3px;text-decoration:none;font-weight:600;font-size:14px;">Open the 7-day plan →</a>
 </div>
 </div>
 
 {:else}
 
-<div style="display:flex;gap:28px;align-items:center;flex-wrap:wrap;border-left:4px solid #B45309;padding-left:20px;margin:8px 0 4px 0;">
+<div style="display:flex;gap:28px;align-items:center;flex-wrap:wrap;border-left:3px solid #1F7A80;padding-left:20px;margin:8px 0 4px 0;">
 <div style="flex:1 1 320px;min-width:260px;">
-<p style="letter-spacing:0.14em;font-size:12px;font-weight:700;color:#B45309;margin:0 0 8px 0;">OPERASI KEBUN SAWIT · INDONESIA</p>
+<p style="letter-spacing:0.14em;font-size:12px;font-weight:700;color:#1F7A80;margin:0 0 8px 0;">OPERASI KEBUN SAWIT · INDONESIA</p>
 <p style="font-family:Georgia,'Palatino Linotype',serif;font-size:clamp(24px,3.4vw,34px);line-height:1.25;font-weight:700;margin:0 0 10px 0;">Tiap pagi jam 06:00 WIB, mandor putuskan: hari ini mupuk, manen, atau nyemprot — per kebun.</p>
 <p style="font-size:15px;line-height:1.6;margin:0 0 10px 0;">Salah hari = pupuk kebuang, buah kepanen jelek, tim nganggur dibayar. Halaman ini ngubah cuaca hari ini + harga + ketersediaan tim jadi lampu hijau/merah per kebun — plus ngitung sehari panen yang bagus itu cuannya berapa.</p>
 <p style="font-size:13px;opacity:0.75;margin:0 0 14px 0;">Cuaca + kurs + hari libur + harga CPO → diolah dbt → jadi halaman ini. Update tiap hari.</p>
-<a href="/forecast" style="display:inline-block;background:#1B4332;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">Buka rencana 7 hari →</a>
+<a href="/forecast" style="display:inline-block;background:#1F7A80;color:#F7F4EE;padding:10px 18px;border-radius:3px;text-decoration:none;font-weight:600;font-size:14px;">Buka rencana 7 hari →</a>
 </div>
 <svg width="200" height="150" viewBox="0 0 200 150" fill="none" aria-hidden="true" style="flex:0 0 auto;opacity:0.4;">
-<path d="M-5,25 Q50,12 105,24 T205,20" stroke="#2D6A4F" stroke-width="1.5"/>
-<path d="M-5,50 Q50,38 105,49 T205,45" stroke="#2D6A4F" stroke-width="1.5"/>
+<path d="M-5,25 Q50,12 105,24 T205,20" stroke="#1F7A80" stroke-width="1.5"/>
+<path d="M-5,50 Q50,38 105,49 T205,45" stroke="#1F7A80" stroke-width="1.5"/>
 <path d="M-5,75 Q50,63 105,74 T205,70" stroke="#8B5E34" stroke-width="1.5"/>
-<path d="M-5,100 Q50,88 105,99 T205,95" stroke="#2D6A4F" stroke-width="1.5"/>
+<path d="M-5,100 Q50,88 105,99 T205,95" stroke="#1F7A80" stroke-width="1.5"/>
 <path d="M-5,125 Q50,113 105,124 T205,120" stroke="#8B5E34" stroke-width="1.5"/>
-<ellipse cx="150" cy="52" rx="16" ry="10" stroke="#2D6A4F" stroke-width="1.5"/>
-<ellipse cx="150" cy="52" rx="7" ry="4" stroke="#2D6A4F" stroke-width="1.5"/>
+<ellipse cx="150" cy="52" rx="16" ry="10" stroke="#1F7A80" stroke-width="1.5"/>
+<ellipse cx="150" cy="52" rx="7" ry="4" stroke="#1F7A80" stroke-width="1.5"/>
 </svg>
 </div>
 
