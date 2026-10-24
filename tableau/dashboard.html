@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Where margin is drifting, March–June 2026</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: #fff; color: #1a1a1a;
+    font: 14px/1.4 "Segoe UI", system-ui, sans-serif;
+  }
+  main { width: 1200px; margin: 0 auto; padding: 16px 8px 48px; }
+  .note {
+    font-size: 12px; color: #5C6570; margin: 0 0 12px;
+  }
+  h1 { font-size: 22px; line-height: 1.25; margin: 0 0 4px; }
+  h2 { font-size: 16px; line-height: 1.3; margin: 0 0 4px; }
+  .sub { color: #5C6570; font-size: 12px; margin: 0 0 10px; }
+  .dash {
+    border: 1px solid #e5e7eb; padding: 12px 12px 8px; margin: 0 0 28px;
+  }
+  .grid { display: grid; grid-template-columns: 460px 1fr; gap: 12px; }
+  button.row, button.shock {
+    font: inherit; background: #fff; border: 1px solid #e5e7eb;
+    cursor: pointer; text-align: left;
+  }
+  button.shock { min-width: 64px; padding: 8px 10px; margin: 0 6px 0 0; }
+  button.shock[aria-pressed="true"] { border-color: #1a1a1a; font-weight: 700; }
+  button.linkish {
+    font: inherit; background: none; border: 0; color: #1F7A80;
+    text-decoration: underline; cursor: pointer; padding: 0;
+  }
+  .status { font-size: 12px; margin: 6px 0 0; }
+  svg { display: block; max-width: 100%; }
+  .axis { fill: #5C6570; font-size: 11px; }
+  .gridline { stroke: #e5e7eb; stroke-width: 1; }
+  .spine { stroke: #1a1a1a; stroke-width: 1; }
+  .avg { stroke: #5C6570; stroke-dasharray: 4 3; fill: none; stroke-width: 1.5; }
+  .series { fill: none; stroke-width: 2; }
+  .flag { fill: #C2410C; }
+</style>
+</head>
+<body>
+<main>
+  <p class="note">DOM reconstruction of tableau/BUILD.md. Not a Tableau workbook. Numbers are the CSV extracts.</p>
+
+  <section class="dash" id="drift">
+    <h1>Where margin is drifting, March–June 2026</h1>
+    <p class="sub">Click an estate to filter the trend. The average line is not a plan. Clearing the selection shows all four estates. The average is a FIXED-style four-estate mean, so it stays when one estate is selected.</p>
+    <div class="grid">
+      <div>
+        <h2>Lampung leads period margin per hectare; only Riau has an estate-specific flag, and it is closed</h2>
+        <p class="sub">Bars are the 3 Mar–30 Jun sum of daily margin per hectare, same 120 days for every estate. Colour is the estate. The amber mark is a rainfall-deficit flag. Price-spike fired for all four estates on the same six May dates, so it is not an estate exception. Both flags are false on 30 Jun.</p>
+        <div id="rank"></div>
+      </div>
+      <div>
+        <h2>Central Kalimantan is last on margin per hectare in every month; there is no plan to judge drift against</h2>
+        <p class="sub">Sum of daily margin per hectare, 3 Mar–30 Jun 2026. March has 29 days because the extract starts 3 Mar; every estate has those same 29 days. The dashed line is the four-estate average, not a plan.</p>
+        <div id="trend"></div>
+        <p class="status" id="filter-status">Filter: all estates</p>
+        <button class="linkish" id="clear-filter" type="button">Show all estates</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="dash" id="price">
+    <h2>Palm's discount to soybean oil widened from 25.7% in March to 36.6% by June, then froze</h2>
+    <p class="sub">Discount = (palm − soy) / soy. The USD spread was widest in May at −645 USD/t; the percent of soy was widest from June at −36.6%. July–September repeats the June print. It is not a new market, and it is not the 30-day forecast.</p>
+    <div id="discount"></div>
+  </section>
+
+  <section class="dash" id="shock">
+    <h1>Harvest-day margin under a palm-price shock</h1>
+    <h2>On a harvest day Riau clears the most per hectare at every palm-price shock; Central Kalimantan stays last</h2>
+    <p class="sub">Weather is held fixed. Base price is the 27 Sep 2026 print, 1,104 USD/t at 17,903 IDR per USD, not the 30 Jun operations close. At −20% the Riau gap to its own base is 18.7 million IDR/ha, which is −20.5% of margin, not −20%, because costs do not scale. A +10% palm shock and a +10% FX shock print the same IDR margin on this grid; this parameter does not move FX.</p>
+    <p class="sub">Set the palm-price shock. This is a parameter, not a scenario filter.</p>
+    <div id="ladder"></div>
+    <p class="status" id="shock-status"></p>
+    <div id="shock-bars"></div>
+  </section>
+</main>
+<script id="data" type="application/json">{"months": ["2026-03", "2026-04", "2026-05", "2026-06"], "order": ["central_kalimantan", "lampung", "north_sumatra", "riau"], "colors": {"central_kalimantan": "#7A5F28", "lampung": "#8C4A6B", "north_sumatra": "#3F6B52", "riau": "#1F7A80"}, "names": {"central_kalimantan": "Central Kalimantan", "lampung": "Lampung", "north_sumatra": "North Sumatra", "riau": "Riau"}, "managers": {"central_kalimantan": "Budi Santoso", "lampung": "Dewi Lestari", "north_sumatra": "Sri Wahyuni", "riau": "Andi Pratama"}, "monthly": {"2026-03": {"central_kalimantan": 748024241.0, "lampung": 1203131442.0, "north_sumatra": 1506723622.0, "riau": 1461870903.0}, "2026-04": {"central_kalimantan": 194672629.0, "lampung": 1089134076.0, "north_sumatra": 990750092.0, "riau": 1075257877.0}, "2026-05": {"central_kalimantan": 122520945.0, "lampung": 1284053495.0, "north_sumatra": 405335770.0, "riau": 726504491.0}, "2026-06": {"central_kalimantan": 715918272.0, "lampung": 1784241115.0, "north_sumatra": 995412573.0, "riau": 1541325582.0}}, "harvest": {"2026-03": {"central_kalimantan": 11, "lampung": 15, "north_sumatra": 19, "riau": 17}, "2026-04": {"central_kalimantan": 3, "lampung": 13, "north_sumatra": 12, "riau": 12}, "2026-05": {"central_kalimantan": 2, "lampung": 15, "north_sumatra": 5, "riau": 8}, "2026-06": {"central_kalimantan": 10, "lampung": 21, "north_sumatra": 12, "riau": 17}}, "period": {"central_kalimantan": 1781136087.0, "lampung": 5360560128.0, "north_sumatra": 3898222057.0, "riau": 4804958853.0}, "harvest_period": {"central_kalimantan": 26, "lampung": 64, "north_sumatra": 48, "riau": 54}, "rain": [{"region_key": "riau", "operation_date": "2026-05-02"}, {"region_key": "riau", "operation_date": "2026-05-03"}], "discount": [{"date": "2026-03-03", "pct": -0.2572002679169457, "spread": -384.0, "palm": 1109.0, "soy": 1493.0, "idr": 18736555.0}, {"date": "2026-03-04", "pct": -0.2572002679169457, "spread": -384.0, "palm": 1109.0, "soy": 1493.0, "idr": 18692195.0}, {"date": "2026-03-05", "pct": -0.2572002679169457, "spread": -384.0, "palm": 1109.0, "soy": 1493.0, "idr": 18752081.0}, {"date": "2026-03-06", "pct": -0.2572002679169457, "spread": -384.0, "palm": 1109.0, "soy": 1493.0, "idr": 18823057.0}, {"date": "2026-03-07", "pct": -0.2572002679169457, "spread": -384.0, "palm": 1109.0, "soy": 1493.0, "idr": 18823057.0}, {"date": "2026-03-08", "pct": -0.2572002679169457, "spread": -384.0, "palm": 1109.0, "soy": 1493.0, "idr": 18823057.0}, {"date": "2026-03-09", "pct": -0.2572002679169457, "spread": -384.0, "palm": 1109.0, "soy": 1493.0, "idr": 18788678.0}, {"date": "2026-03-10", "pct": -0.2572002679169457, "spread": -384.0, "palm": 1109.0, "soy": 1493.0, "idr": 18704394.0}, {"date": "2026-03-11", "pct": -0.2572002679169457, "spread": -384.0, "palm": 1109.0, "soy": 1493.0, "idr": 18739882.0}, {"date": "2026-03-12", "pct": -0.2572002679169457, "spread": -384.0, "palm": 1109.0, "soy": 1493.0, "idr": 18726574.0}, {"date": "2026-03-13", "pct": -0.2572002679169457, "spread": -384.0, "palm": 1109.0, "soy": 1493.0, "idr": 18742100.0}, {"date": "2026-03-14", "pct": -0.2572002679169457, "spread": -384.0, "palm": 1109.0, "soy": 1493.0, "idr": 18742100.0}, {"date": "2026-03-15", "pct": -0.2572002679169457, "spread": -384.0, "palm": 1109.0, "soy": 1493.0, "idr": 18742100.0}, {"date": "2026-03-16", "pct": -0.2572002679169457, "spread": -384.0, "palm": 1109.0, "soy": 1493.0, "idr": 18814185.0}, {"date": "2026-03-17", "pct": -0.2572002679169457, "spread": -384.0, "palm": 1109.0, "soy": 1493.0, "idr": 18806422.0}, {"date": "2026-03-18", "pct": -0.2572002679169457, "spread": -384.0, "palm": 1109.0, "soy": 1493.0, "idr": 18846346.0}, {"date": "2026-03-19", "pct": -0.2572002679169457, "spread": -384.0, "palm": 1109.0, "soy": 1493.0, "idr": 18809749.0}, {"date": "2026-03-20", "pct": -0.2572002679169457, "spread": -384.0, "palm": 1109.0, "soy": 1493.0, "idr": 18769825.0}, {"date": "2026-03-21", "pct": -0.2572002679169457, "spread": -384.0, "palm": 1109.0, "soy": 1493.0, "idr": 18769825.0}, {"date": "2026-03-22", "pct": -0.2572002679169457, "spread": -384.0, "palm": 1109.0, "soy": 1493.0, "idr": 18769825.0}, {"date": "2026-03-23", "pct": -0.2572002679169457, "spread": -384.0, "palm": 1109.0, "soy": 1493.0, "idr": 18737664.0}, {"date": "2026-03-24", "pct": -0.2572002679169457, "spread": -384.0, "palm": 1109.0, "soy": 1493.0, "idr": 18732119.0}, {"date": "2026-03-25", "pct": -0.2572002679169457, "spread": -384.0, "palm": 1109.0, "soy": 1493.0, "idr": 18695522.0}, {"date": "2026-03-26", "pct": -0.2572002679169457, "spread": -384.0, "palm": 1109.0, "soy": 1493.0, "idr": 18760953.0}, {"date": "2026-03-27", "pct": -0.2572002679169457, "spread": -384.0, "palm": 1109.0, "soy": 1493.0, "idr": 18834147.0}, {"date": "2026-03-28", "pct": -0.2572002679169457, "spread": -384.0, "palm": 1109.0, "soy": 1493.0, "idr": 18834147.0}, {"date": "2026-03-29", "pct": -0.2572002679169457, "spread": -384.0, "palm": 1109.0, "soy": 1493.0, "idr": 18834147.0}, {"date": "2026-03-30", "pct": -0.2572002679169457, "spread": -384.0, "palm": 1109.0, "soy": 1493.0, "idr": 18872962.0}, {"date": "2026-03-31", "pct": -0.2572002679169457, "spread": -384.0, "palm": 1109.0, "soy": 1493.0, "idr": 18814185.0}, {"date": "2026-04-01", "pct": -0.30249543517954963, "spread": -497.0, "palm": 1146.0, "soy": 1643.0, "idr": 19383444.0}, {"date": "2026-04-02", "pct": -0.30249543517954963, "spread": -497.0, "palm": 1146.0, "soy": 1643.0, "idr": 19494606.0}, {"date": "2026-04-03", "pct": -0.30249543517954963, "spread": -497.0, "palm": 1146.0, "soy": 1643.0, "idr": 19494606.0}, {"date": "2026-04-04", "pct": -0.30249543517954963, "spread": -497.0, "palm": 1146.0, "soy": 1643.0, "idr": 19494606.0}, {"date": "2026-04-05", "pct": -0.30249543517954963, "spread": -497.0, "palm": 1146.0, "soy": 1643.0, "idr": 19494606.0}, {"date": "2026-04-06", "pct": -0.30249543517954963, "spread": -497.0, "palm": 1146.0, "soy": 1643.0, "idr": 19494606.0}, {"date": "2026-04-07", "pct": -0.30249543517954963, "spread": -497.0, "palm": 1146.0, "soy": 1643.0, "idr": 19562220.0}, {"date": "2026-04-08", "pct": -0.30249543517954963, "spread": -497.0, "palm": 1146.0, "soy": 1643.0, "idr": 19454496.0}, {"date": "2026-04-09", "pct": -0.30249543517954963, "spread": -497.0, "palm": 1146.0, "soy": 1643.0, "idr": 19593162.0}, {"date": "2026-04-10", "pct": -0.30249543517954963, "spread": -497.0, "palm": 1146.0, "soy": 1643.0, "idr": 19590870.0}, {"date": "2026-04-11", "pct": -0.30249543517954963, "spread": -497.0, "palm": 1146.0, "soy": 1643.0, "idr": 19590870.0}, {"date": "2026-04-12", "pct": -0.30249543517954963, "spread": -497.0, "palm": 1146.0, "soy": 1643.0, "idr": 19590870.0}, {"date": "2026-04-13", "pct": -0.30249543517954963, "spread": -497.0, "palm": 1146.0, "soy": 1643.0, "idr": 19697448.0}, {"date": "2026-04-14", "pct": -0.30249543517954963, "spread": -497.0, "palm": 1146.0, "soy": 1643.0, "idr": 19632126.0}, {"date": "2026-04-15", "pct": -0.30249543517954963, "spread": -497.0, "palm": 1146.0, "soy": 1643.0, "idr": 19658484.0}, {"date": "2026-04-16", "pct": -0.30249543517954963, "spread": -497.0, "palm": 1146.0, "soy": 1643.0, "idr": 19642440.0}, {"date": "2026-04-17", "pct": -0.30249543517954963, "spread": -497.0, "palm": 1146.0, "soy": 1643.0, "idr": 19688280.0}, {"date": "2026-04-18", "pct": -0.30249543517954963, "spread": -497.0, "palm": 1146.0, "soy": 1643.0, "idr": 19688280.0}, {"date": "2026-04-19", "pct": -0.30249543517954963, "spread": -497.0, "palm": 1146.0, "soy": 1643.0, "idr": 19688280.0}, {"date": "2026-04-20", "pct": -0.30249543517954963, "spread": -497.0, "palm": 1146.0, "soy": 1643.0, "idr": 19629834.0}, {"date": "2026-04-21", "pct": -0.30249543517954963, "spread": -497.0, "palm": 1146.0, "soy": 1643.0, "idr": 19628688.0}, {"date": "2026-04-22", "pct": -0.30249543517954963, "spread": -497.0, "palm": 1146.0, "soy": 1643.0, "idr": 19710054.0}, {"date": "2026-04-23", "pct": -0.30249543517954963, "spread": -497.0, "palm": 1146.0, "soy": 1643.0, "idr": 19798296.0}, {"date": "2026-04-24", "pct": -0.30249543517954963, "spread": -497.0, "palm": 1146.0, "soy": 1643.0, "idr": 19761624.0}, {"date": "2026-04-25", "pct": -0.30249543517954963, "spread": -497.0, "palm": 1146.0, "soy": 1643.0, "idr": 19761624.0}, {"date": "2026-04-26", "pct": -0.30249543517954963, "spread": -497.0, "palm": 1146.0, "soy": 1643.0, "idr": 19761624.0}, {"date": "2026-04-27", "pct": -0.30249543517954963, "spread": -497.0, "palm": 1146.0, "soy": 1643.0, "idr": 19721514.0}, {"date": "2026-04-28", "pct": -0.30249543517954963, "spread": -497.0, "palm": 1146.0, "soy": 1643.0, "idr": 19807464.0}, {"date": "2026-04-29", "pct": -0.30249543517954963, "spread": -497.0, "palm": 1146.0, "soy": 1643.0, "idr": 19880808.0}, {"date": "2026-04-30", "pct": -0.30249543517954963, "spread": -497.0, "palm": 1146.0, "soy": 1643.0, "idr": 19878516.0}, {"date": "2026-05-01", "pct": -0.3621560920830994, "spread": -645.0, "palm": 1136.0, "soy": 1781.0, "idr": 19705056.0}, {"date": "2026-05-02", "pct": -0.3621560920830994, "spread": -645.0, "palm": 1136.0, "soy": 1781.0, "idr": 19705056.0}, {"date": "2026-05-03", "pct": -0.3621560920830994, "spread": -645.0, "palm": 1136.0, "soy": 1781.0, "idr": 19705056.0}, {"date": "2026-05-04", "pct": -0.3621560920830994, "spread": -645.0, "palm": 1136.0, "soy": 1781.0, "idr": 19776624.0}, {"date": "2026-05-05", "pct": -0.3621560920830994, "spread": -645.0, "palm": 1136.0, "soy": 1781.0, "idr": 19826608.0}, {"date": "2026-05-06", "pct": -0.3621560920830994, "spread": -645.0, "palm": 1136.0, "soy": 1781.0, "idr": 19684608.0}, {"date": "2026-05-07", "pct": -0.3621560920830994, "spread": -645.0, "palm": 1136.0, "soy": 1781.0, "idr": 19650528.0}, {"date": "2026-05-08", "pct": -0.3621560920830994, "spread": -645.0, "palm": 1136.0, "soy": 1781.0, "idr": 19727776.0}, {"date": "2026-05-09", "pct": -0.3621560920830994, "spread": -645.0, "palm": 1136.0, "soy": 1781.0, "idr": 19727776.0}, {"date": "2026-05-10", "pct": -0.3621560920830994, "spread": -645.0, "palm": 1136.0, "soy": 1781.0, "idr": 19727776.0}, {"date": "2026-05-11", "pct": -0.3621560920830994, "spread": -645.0, "palm": 1136.0, "soy": 1781.0, "idr": 19794800.0}, {"date": "2026-05-12", "pct": -0.3621560920830994, "spread": -645.0, "palm": 1136.0, "soy": 1781.0, "idr": 19876592.0}, {"date": "2026-05-13", "pct": -0.3621560920830994, "spread": -645.0, "palm": 1136.0, "soy": 1781.0, "idr": 19875456.0}, {"date": "2026-05-14", "pct": -0.3621560920830994, "spread": -645.0, "palm": 1136.0, "soy": 1781.0, "idr": 19840240.0}, {"date": "2026-05-15", "pct": -0.3621560920830994, "spread": -645.0, "palm": 1136.0, "soy": 1781.0, "idr": 19981104.0}, {"date": "2026-05-16", "pct": -0.3621560920830994, "spread": -645.0, "palm": 1136.0, "soy": 1781.0, "idr": 19981104.0}, {"date": "2026-05-17", "pct": -0.3621560920830994, "spread": -645.0, "palm": 1136.0, "soy": 1781.0, "idr": 19981104.0}, {"date": "2026-05-18", "pct": -0.3621560920830994, "spread": -645.0, "palm": 1136.0, "soy": 1781.0, "idr": 20087888.0}, {"date": "2026-05-19", "pct": -0.3621560920830994, "spread": -645.0, "palm": 1136.0, "soy": 1781.0, "idr": 20156048.0}, {"date": "2026-05-20", "pct": -0.3621560920830994, "spread": -645.0, "palm": 1136.0, "soy": 1781.0, "idr": 20108336.0}, {"date": "2026-05-21", "pct": -0.3621560920830994, "spread": -645.0, "palm": 1136.0, "soy": 1781.0, "idr": 20081072.0}, {"date": "2026-05-22", "pct": -0.3621560920830994, "spread": -645.0, "palm": 1136.0, "soy": 1781.0, "idr": 20101520.0}, {"date": "2026-05-23", "pct": -0.3621560920830994, "spread": -645.0, "palm": 1136.0, "soy": 1781.0, "idr": 20101520.0}, {"date": "2026-05-24", "pct": -0.3621560920830994, "spread": -645.0, "palm": 1136.0, "soy": 1781.0, "idr": 20101520.0}, {"date": "2026-05-25", "pct": -0.3621560920830994, "spread": -645.0, "palm": 1136.0, "soy": 1781.0, "idr": 20145824.0}, {"date": "2026-05-26", "pct": -0.3621560920830994, "spread": -645.0, "palm": 1136.0, "soy": 1781.0, "idr": 20260560.0}, {"date": "2026-05-27", "pct": -0.3621560920830994, "spread": -645.0, "palm": 1136.0, "soy": 1781.0, "idr": 20262832.0}, {"date": "2026-05-28", "pct": -0.3621560920830994, "spread": -645.0, "palm": 1136.0, "soy": 1781.0, "idr": 20278736.0}, {"date": "2026-05-29", "pct": -0.3621560920830994, "spread": -645.0, "palm": 1136.0, "soy": 1781.0, "idr": 20238976.0}, {"date": "2026-05-30", "pct": -0.3621560920830994, "spread": -645.0, "palm": 1136.0, "soy": 1781.0, "idr": 20238976.0}, {"date": "2026-05-31", "pct": -0.3621560920830994, "spread": -645.0, "palm": 1136.0, "soy": 1781.0, "idr": 20238976.0}, {"date": "2026-06-01", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19689840.0}, {"date": "2026-06-02", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19681008.0}, {"date": "2026-06-03", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19830048.0}, {"date": "2026-06-04", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19900704.0}, {"date": "2026-06-05", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19949280.0}, {"date": "2026-06-06", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19949280.0}, {"date": "2026-06-07", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19949280.0}, {"date": "2026-06-08", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 20038704.0}, {"date": "2026-06-09", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19816800.0}, {"date": "2026-06-10", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19772640.0}, {"date": "2026-06-11", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19843296.0}, {"date": "2026-06-12", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19637952.0}, {"date": "2026-06-13", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19637952.0}, {"date": "2026-06-14", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19637952.0}, {"date": "2026-06-15", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19561776.0}, {"date": "2026-06-16", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19563984.0}, {"date": "2026-06-17", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19654512.0}, {"date": "2026-06-18", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19734000.0}, {"date": "2026-06-19", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19660032.0}, {"date": "2026-06-20", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19660032.0}, {"date": "2026-06-21", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19660032.0}, {"date": "2026-06-22", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19693152.0}, {"date": "2026-06-23", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19784784.0}, {"date": "2026-06-24", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19846608.0}, {"date": "2026-06-25", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19852128.0}, {"date": "2026-06-26", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19716336.0}, {"date": "2026-06-27", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19716336.0}, {"date": "2026-06-28", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19716336.0}, {"date": "2026-06-29", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19709712.0}, {"date": "2026-06-30", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-07-01", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-07-02", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-07-03", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-07-04", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-07-05", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-07-06", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-07-07", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-07-08", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-07-09", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-07-10", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-07-11", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-07-12", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-07-13", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-07-14", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-07-15", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-07-16", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-07-17", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-07-18", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-07-19", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-07-20", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-07-21", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-07-22", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-07-23", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-07-24", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-07-25", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-07-26", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-07-27", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-07-28", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-07-29", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-07-30", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-07-31", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-08-01", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-08-02", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-08-03", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-08-04", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-08-05", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-08-06", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-08-07", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-08-08", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-08-09", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-08-10", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-08-11", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-08-12", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-08-13", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-08-14", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-08-15", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-08-16", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-08-17", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-08-18", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-08-19", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-08-20", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-08-21", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-08-22", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-08-23", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-08-24", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-08-25", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-08-26", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-08-27", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-08-28", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-08-29", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-08-30", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-08-31", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-09-01", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-09-02", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-09-03", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-09-04", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-09-05", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-09-06", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-09-07", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-09-08", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-09-09", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-09-10", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-09-11", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-09-12", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-09-13", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-09-14", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-09-15", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-09-16", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-09-17", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-09-18", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-09-19", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-09-20", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-09-21", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-09-22", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-09-23", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-09-24", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-09-25", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-09-26", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}, {"date": "2026-09-27", "pct": -0.36551724137931035, "spread": -636.0, "palm": 1104.0, "soy": 1740.0, "idr": 19764912.0}], "whatif": [{"region_key": "central_kalimantan", "scenario": "base", "palm_mult": 1.0, "margin": 73379084.0, "cpo": 19764912.0}, {"region_key": "central_kalimantan", "scenario": "palm_+10pct", "palm_mult": 1.1, "margin": 80933233.0, "cpo": 21741403.0}, {"region_key": "central_kalimantan", "scenario": "palm_+20pct", "palm_mult": 1.2, "margin": 88487382.0, "cpo": 23717894.0}, {"region_key": "central_kalimantan", "scenario": "palm_-10pct", "palm_mult": 0.9, "margin": 65824934.0, "cpo": 17788421.0}, {"region_key": "central_kalimantan", "scenario": "palm_-20pct", "palm_mult": 0.8, "margin": 58270785.0, "cpo": 15811930.0}, {"region_key": "lampung", "scenario": "base", "palm_mult": 1.0, "margin": 85325985.0, "cpo": 19764912.0}, {"region_key": "lampung", "scenario": "palm_+10pct", "palm_mult": 1.1, "margin": 94066029.0, "cpo": 21741403.0}, {"region_key": "lampung", "scenario": "palm_+20pct", "palm_mult": 1.2, "margin": 102806073.0, "cpo": 23717894.0}, {"region_key": "lampung", "scenario": "palm_-10pct", "palm_mult": 0.9, "margin": 76585941.0, "cpo": 17788421.0}, {"region_key": "lampung", "scenario": "palm_-20pct", "palm_mult": 0.8, "margin": 67845897.0, "cpo": 15811930.0}, {"region_key": "north_sumatra", "scenario": "base", "palm_mult": 1.0, "margin": 84072557.0, "cpo": 19764912.0}, {"region_key": "north_sumatra", "scenario": "palm_+10pct", "palm_mult": 1.1, "margin": 92682152.0, "cpo": 21741403.0}, {"region_key": "north_sumatra", "scenario": "palm_+20pct", "palm_mult": 1.2, "margin": 101291748.0, "cpo": 23717894.0}, {"region_key": "north_sumatra", "scenario": "palm_-10pct", "palm_mult": 0.9, "margin": 75462961.0, "cpo": 17788421.0}, {"region_key": "north_sumatra", "scenario": "palm_-20pct", "palm_mult": 0.8, "margin": 66853365.0, "cpo": 15811930.0}, {"region_key": "riau", "scenario": "base", "palm_mult": 1.0, "margin": 91332184.0, "cpo": 19764912.0}, {"region_key": "riau", "scenario": "palm_+10pct", "palm_mult": 1.1, "margin": 100680987.0, "cpo": 21741403.0}, {"region_key": "riau", "scenario": "palm_+20pct", "palm_mult": 1.2, "margin": 110029791.0, "cpo": 23717894.0}, {"region_key": "riau", "scenario": "palm_-10pct", "palm_mult": 0.9, "margin": 81983380.0, "cpo": 17788421.0}, {"region_key": "riau", "scenario": "palm_-20pct", "palm_mult": 0.8, "margin": 72634577.0, "cpo": 15811930.0}], "shocks": [-20, -10, 0, 10, 20]}</script>
+<script>
+const D = JSON.parse(document.getElementById("data").textContent);
+const selected = { region: null, shock: 0 };
+
+const bn = (v) => (v / 1e9).toFixed(2);
+const mn = (v) => (v / 1e6).toFixed(1);
+const pct = (v) => (v * 100).toFixed(1) + "%";
+const signedPct = (v) => {
+  const n = v * 100;
+  const body = Math.abs(n).toFixed(1) + "%";
+  if (n > 0) return "+" + body;
+  if (n < 0) return "−" + body;
+  return "0.0%";
+};
+
+function svgEl(name, attrs) {
+  const el = document.createElementNS("http://www.w3.org/2000/svg", name);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+  return el;
+}
+
+function haloText(parent, attrs, text) {
+  const t = svgEl("text", attrs);
+  t.setAttribute("stroke", "#fff");
+  t.setAttribute("stroke-width", "3");
+  t.setAttribute("paint-order", "stroke");
+  t.textContent = text;
+  parent.appendChild(t);
+  return t;
+}
+
+function average(month) {
+  const vals = D.order.map((k) => D.monthly[month][k]);
+  return vals.reduce((a, b) => a + b, 0) / vals.length;
+}
+
+function renderRank() {
+  const host = document.getElementById("rank");
+  host.replaceChildren();
+  const W = 440, H = 280, padL = 118, padR = 78, padT = 8, padB = 28;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const yMax = 6e9;
+  const ranked = [...D.order].sort((a, b) => D.period[b] - D.period[a]);
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: "img" });
+  svg.appendChild(svgEl("title", {})).textContent = "Period margin per hectare by estate";
+  for (const tick of [0, 2, 4, 6]) {
+    const x = padL + (tick / 6) * plotW;
+    svg.appendChild(svgEl("line", { x1: x, x2: x, y1: padT, y2: padT + plotH, class: "gridline" }));
+    const label = svgEl("text", { x, y: H - 8, "text-anchor": "middle", class: "axis" });
+    label.textContent = tick === 0 ? "0" : tick + " bn";
+    svg.appendChild(label);
+  }
+  svg.appendChild(svgEl("line", { x1: padL, x2: padL, y1: padT, y2: padT + plotH, class: "spine" }));
+  svg.appendChild(svgEl("line", { x1: padL, x2: padL + plotW, y1: padT + plotH, y2: padT + plotH, class: "spine" }));
+  ranked.forEach((key, i) => {
+    const y = padT + i * (plotH / ranked.length) + 10;
+    const h = plotH / ranked.length - 18;
+    const w = (D.period[key] / yMax) * plotW;
+    const name = svgEl("text", { x: padL - 8, y: y + h / 2 + 4, "text-anchor": "end", class: "axis" });
+    name.textContent = D.names[key];
+    svg.appendChild(name);
+    const bar = svgEl("rect", {
+      x: padL, y, width: Math.max(w, 0), height: h,
+      fill: D.colors[key],
+      stroke: selected.region === key ? "#1a1a1a" : "none",
+      "stroke-width": 2,
+    });
+    svg.appendChild(bar);
+    haloText(svg, { x: padL + w + 8, y: y + h / 2 + 4, class: "axis", fill: "#1a1a1a" }, bn(D.period[key]));
+    if (key === "riau") {
+      svg.appendChild(svgEl("circle", {
+        cx: padL + w - 8, cy: y + h / 2, r: 6, class: "flag",
+      }));
+      const flag = svgEl("title", {});
+      flag.textContent = "2 deficit days, 2–3 May. Closed on 30 Jun.";
+      svg.lastChild.appendChild(flag);
+    }
+  });
+  host.appendChild(svg);
+  ranked.forEach((key, i) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "row";
+    btn.style.cssText = "display:block;width:100%;margin-top:4px;padding:4px 8px";
+    btn.setAttribute("aria-pressed", String(selected.region === key));
+    btn.textContent = (selected.region === key ? "Selected: " : "Filter trend to ") + D.names[key] + " · " + D.managers[key];
+    btn.addEventListener("click", () => {
+      selected.region = selected.region === key ? null : key;
+      render();
+    });
+    host.appendChild(btn);
+  });
+}
+
+function renderTrend() {
+  const host = document.getElementById("trend");
+  host.replaceChildren();
+  const W = 680, H = 320, padL = 48, padR = 108, padT = 12, padB = 32;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const yMax = 2e9;
+  const yOf = (v) => padT + plotH * (1 - v / yMax);
+  const xOf = (i) => padL + (D.months.length === 1 ? plotW / 2 : (i / (D.months.length - 1)) * plotW);
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: "img" });
+  svg.appendChild(svgEl("title", {})).textContent = "Monthly margin per hectare by estate";
+  for (const tick of [0, 0.5, 1, 1.5, 2]) {
+    const y = yOf(tick * 1e9);
+    svg.appendChild(svgEl("line", { x1: padL, x2: padL + plotW, y1: y, y2: y, class: "gridline" }));
+    const label = svgEl("text", { x: padL - 6, y: y + 3, "text-anchor": "end", class: "axis" });
+    label.textContent = tick.toFixed(1);
+    svg.appendChild(label);
+  }
+  svg.appendChild(svgEl("line", { x1: padL, x2: padL, y1: padT, y2: padT + plotH, class: "spine" }));
+  svg.appendChild(svgEl("line", { x1: padL, x2: padL + plotW, y1: padT + plotH, y2: padT + plotH, class: "spine" }));
+  D.months.forEach((m, i) => {
+    const label = svgEl("text", { x: xOf(i), y: H - 10, "text-anchor": "middle", class: "axis" });
+    label.textContent = m.slice(5);
+    svg.appendChild(label);
+  });
+  const avgPts = D.months.map((m, i) => `${xOf(i)},${yOf(average(m))}`).join(" ");
+  svg.appendChild(svgEl("polyline", { points: avgPts, class: "avg" }));
+  haloText(svg, {
+    x: xOf(D.months.length - 1) + 6,
+    y: yOf(average(D.months.at(-1))) + 4,
+    class: "axis", fill: "#5C6570",
+  }, "avg " + bn(average(D.months.at(-1))));
+  const shown = selected.region ? [selected.region] : D.order;
+  for (const key of shown) {
+    const pts = D.months.map((m, i) => `${xOf(i)},${yOf(D.monthly[m][key])}`).join(" ");
+    svg.appendChild(svgEl("polyline", { points: pts, class: "series", stroke: D.colors[key] }));
+    D.months.forEach((m, i) => {
+      svg.appendChild(svgEl("circle", {
+        cx: xOf(i), cy: yOf(D.monthly[m][key]), r: 3, fill: D.colors[key],
+      }));
+    });
+    const last = D.monthly[D.months.at(-1)][key];
+    haloText(svg, {
+      x: xOf(D.months.length - 1) + 8,
+      y: yOf(last) + 4,
+      fill: D.colors[key], "font-size": "11",
+    }, D.names[key].split(" ")[0] + " " + bn(last));
+  }
+  host.appendChild(svg);
+  const axis = document.createElement("p");
+  axis.className = "sub";
+  axis.textContent = "Monthly margin per hectare (bn IDR/ha). Zero baseline.";
+  host.appendChild(axis);
+  document.getElementById("filter-status").textContent = selected.region
+    ? "Filter: " + D.names[selected.region] + " only. Average still uses all four estates."
+    : "Filter: all estates";
+}
+
+function renderDiscount() {
+  const host = document.getElementById("discount");
+  host.replaceChildren();
+  const rows = D.discount;
+  const W = 1160, H = 280, padL = 52, padR = 16, padT = 16, padB = 28;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const yMin = -0.42, yMax = 0;
+  const yOf = (v) => padT + plotH * (1 - (v - yMin) / (yMax - yMin));
+  const xOf = (i) => padL + (i / (rows.length - 1)) * plotW;
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: "img" });
+  svg.appendChild(svgEl("title", {})).textContent = "Palm discount to soybean oil";
+  for (const tick of [0, -0.1, -0.2, -0.3, -0.4]) {
+    const y = yOf(tick);
+    svg.appendChild(svgEl("line", { x1: padL, x2: padL + plotW, y1: y, y2: y, class: "gridline" }));
+    const label = svgEl("text", { x: padL - 6, y: y + 3, "text-anchor": "end", class: "axis" });
+    label.textContent = (tick * 100).toFixed(0) + "%";
+    svg.appendChild(label);
+  }
+  svg.appendChild(svgEl("line", { x1: padL, x2: padL, y1: padT, y2: padT + plotH, class: "spine" }));
+  svg.appendChild(svgEl("line", { x1: padL, x2: padL + plotW, y1: padT + plotH, y2: padT + plotH, class: "spine" }));
+  const march = rows.find((r) => r.date.startsWith("2026-03")).pct;
+  svg.appendChild(svgEl("line", {
+    x1: padL, x2: padL + plotW, y1: yOf(march), y2: yOf(march), class: "avg",
+  }));
+  haloText(svg, { x: padL + 4, y: yOf(march) - 4, class: "axis", fill: "#5C6570" }, "March discount −25.7%");
+  const pts = rows.map((r, i) => `${xOf(i)},${yOf(r.pct)}`).join(" ");
+  svg.appendChild(svgEl("polyline", { points: pts, class: "series", stroke: "#1F7A80" }));
+  ["2026-03-03", "2026-06-01", "2026-09-27"].forEach((d) => {
+    const i = rows.findIndex((r) => r.date === d);
+    const label = svgEl("text", { x: xOf(i), y: H - 8, "text-anchor": "middle", class: "axis" });
+    label.textContent = d.slice(5);
+    svg.appendChild(label);
+  });
+  host.appendChild(svg);
+  const cap = document.createElement("p");
+  cap.className = "sub";
+  cap.textContent = "Palm discount to soybean oil. No forecast band: the 30-day extract is a flat 1,104 USD/t with width 0 and no overlapping actual.";
+  host.appendChild(cap);
+}
+
+function rowsForShock(shock) {
+  const mult = 1 + shock / 100;
+  return D.whatif
+    .filter((r) => Math.abs(r.palm_mult - mult) < 1e-9)
+    .sort((a, b) => b.margin - a.margin);
+}
+
+function renderShock() {
+  const ladder = document.getElementById("ladder");
+  ladder.replaceChildren();
+  for (const shock of D.shocks) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "shock";
+    btn.setAttribute("aria-pressed", String(selected.shock === shock));
+    btn.textContent = (shock > 0 ? "+" : "") + shock + "%";
+    btn.addEventListener("click", () => {
+      selected.shock = shock;
+      renderShock();
+    });
+    ladder.appendChild(btn);
+  }
+  const rows = rowsForShock(selected.shock);
+  const base = Object.fromEntries(rowsForShock(0).map((r) => [r.region_key, r.margin]));
+  document.getElementById("shock-status").textContent =
+    "Price shock % = " + selected.shock + ". FX held at 1.00.";
+  const host = document.getElementById("shock-bars");
+  host.replaceChildren();
+  const W = 720, H = 260, padL = 140, padR = 140, padT = 8, padB = 28;
+  const plotW = W - padL - padR, plotH = H - padT - padB;
+  const yMax = 120e6;
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: "img" });
+  svg.appendChild(svgEl("title", {})).textContent = "Harvest-day margin at the selected palm-price shock";
+  for (const tick of [0, 40, 80, 120]) {
+    const x = padL + (tick / 120) * plotW;
+    svg.appendChild(svgEl("line", { x1: x, x2: x, y1: padT, y2: padT + plotH, class: "gridline" }));
+    const label = svgEl("text", { x, y: H - 8, "text-anchor": "middle", class: "axis" });
+    label.textContent = String(tick);
+    svg.appendChild(label);
+  }
+  svg.appendChild(svgEl("line", { x1: padL, x2: padL, y1: padT, y2: padT + plotH, class: "spine" }));
+  svg.appendChild(svgEl("line", { x1: padL, x2: padL + plotW, y1: padT + plotH, y2: padT + plotH, class: "spine" }));
+  rows.forEach((r, i) => {
+    const y = padT + i * (plotH / rows.length) + 8;
+    const h = plotH / rows.length - 16;
+    const w = (r.margin / yMax) * plotW;
+    const name = svgEl("text", { x: padL - 8, y: y + h / 2 + 4, "text-anchor": "end", class: "axis" });
+    name.textContent = D.names[r.region_key];
+    svg.appendChild(name);
+    svg.appendChild(svgEl("rect", {
+      x: padL, y, width: w, height: h, fill: D.colors[r.region_key],
+    }));
+    const impact = (r.margin - base[r.region_key]) / base[r.region_key];
+    haloText(svg, { x: padL + w + 8, y: y + h / 2 + 4, class: "axis", fill: "#1a1a1a" }, mn(r.margin) + "  " + signedPct(impact));
+  });
+  host.appendChild(svg);
+  const axis = document.createElement("p");
+  axis.className = "sub";
+  axis.textContent = "Harvest-day margin (m IDR/ha). Label is level and impact versus that estate's own base. Zero baseline.";
+  host.appendChild(axis);
+}
+
+function render() {
+  renderRank();
+  renderTrend();
+  renderDiscount();
+  renderShock();
+}
+document.getElementById("clear-filter").addEventListener("click", () => {
+  selected.region = null;
+  render();
+});
+render();
+</script>
+</body>
+</html>

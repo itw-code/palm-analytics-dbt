@@ -1,0 +1,5 @@
+region_key,region_name,island,latitude,longitude,planted_hectares,yield_t_ha,estate_manager
+central_kalimantan,Central Kalimantan,Kalimantan,-1.68,113.38,15200.0,18.2,Budi Santoso
+lampung,Lampung,Sumatra,-5.45,105.26,7400.0,20.1,Dewi Lestari
+north_sumatra,North Sumatra,Sumatra,3.59,98.67,9800.0,19.8,Sri Wahyuni
+riau,Riau,Sumatra,0.51,101.45,12500.0,21.5,Andi Pratama

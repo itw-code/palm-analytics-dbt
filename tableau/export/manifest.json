@@ -1,0 +1,680 @@
+{
+  "extracts": [
+    {
+      "file": "fct_estate_margin_daily__region_date.csv",
+      "model": "fct_estate_margin_daily",
+      "grain": [
+        "region_key",
+        "operation_date"
+      ],
+      "keys": [
+        "operations_key",
+        "region_key",
+        "operation_date"
+      ],
+      "columns": [
+        "operations_key",
+        "region_key",
+        "operation_date",
+        "is_effective_harvest_day",
+        "cpo_idr_per_tonne",
+        "planted_hectares",
+        "yield_t_ha",
+        "fertilizer_cost_idr_per_ha",
+        "harvest_cost_idr_per_ha",
+        "transport_cost_idr_per_tonne",
+        "extraction_rate",
+        "revenue_idr_per_ha",
+        "transport_cost_idr_per_ha",
+        "margin_idr_per_ha",
+        "margin_total_idr"
+      ],
+      "mart_rows": 480,
+      "csv_rows": 480,
+      "null_keys": {
+        "operations_key": 0,
+        "region_key": 0,
+        "operation_date": 0
+      },
+      "duplicate_grains": 0
+    },
+    {
+      "file": "fct_commodity_price_daily__price_date.csv",
+      "model": "fct_commodity_price_daily",
+      "grain": [
+        "price_date"
+      ],
+      "keys": [
+        "price_date"
+      ],
+      "columns": [
+        "price_date",
+        "palm_oil_usd",
+        "soybean_oil_usd",
+        "palm_soy_spread_usd",
+        "usd_idr",
+        "palm_oil_idr"
+      ],
+      "mart_rows": 209,
+      "csv_rows": 209,
+      "null_keys": {
+        "price_date": 0
+      },
+      "duplicate_grains": 0
+    },
+    {
+      "file": "forecast_cpo_30day__forecast_date.csv",
+      "model": "forecast_cpo_30day",
+      "grain": [
+        "forecast_date"
+      ],
+      "keys": [
+        "forecast_date"
+      ],
+      "columns": [
+        "forecast_date",
+        "horizon_days",
+        "forecast_palm_usd",
+        "band_half_width_usd",
+        "lower_usd",
+        "upper_usd"
+      ],
+      "mart_rows": 30,
+      "csv_rows": 30,
+      "null_keys": {
+        "forecast_date": 0
+      },
+      "duplicate_grains": 0
+    },
+    {
+      "file": "rec_anomaly_flags__region_date.csv",
+      "model": "rec_anomaly_flags",
+      "grain": [
+        "region_key",
+        "operation_date"
+      ],
+      "keys": [
+        "anomaly_key",
+        "region_key",
+        "operation_date"
+      ],
+      "columns": [
+        "anomaly_key",
+        "region_key",
+        "operation_date",
+        "rain_14d_mm",
+        "deficit_14d_mm",
+        "is_rainfall_deficit",
+        "palm_mom_pct",
+        "is_price_spike"
+      ],
+      "mart_rows": 240,
+      "csv_rows": 240,
+      "null_keys": {
+        "anomaly_key": 0,
+        "region_key": 0,
+        "operation_date": 0
+      },
+      "duplicate_grains": 0
+    },
+    {
+      "file": "whatif_margin_shocks__region_scenario.csv",
+      "model": "whatif_margin_shocks",
+      "grain": [
+        "region_key",
+        "scenario"
+      ],
+      "keys": [
+        "whatif_key",
+        "region_key",
+        "scenario"
+      ],
+      "columns": [
+        "whatif_key",
+        "region_key",
+        "scenario",
+        "palm_mult",
+        "fx_mult",
+        "shocked_palm_usd",
+        "shocked_usd_idr",
+        "shocked_cpo_idr",
+        "shocked_margin_idr_per_ha"
+      ],
+      "mart_rows": 36,
+      "csv_rows": 36,
+      "null_keys": {
+        "whatif_key": 0,
+        "region_key": 0,
+        "scenario": 0
+      },
+      "duplicate_grains": 0
+    },
+    {
+      "file": "dim_region__region_key.csv",
+      "model": "dim_region",
+      "grain": [
+        "region_key"
+      ],
+      "keys": [
+        "region_key"
+      ],
+      "columns": [
+        "region_key",
+        "region_name",
+        "island",
+        "latitude",
+        "longitude",
+        "planted_hectares",
+        "yield_t_ha",
+        "estate_manager"
+      ],
+      "mart_rows": 4,
+      "csv_rows": 4,
+      "null_keys": {
+        "region_key": 0
+      },
+      "duplicate_grains": 0
+    }
+  ],
+  "profile": {
+    "margin_span": {
+      "min_date": "2026-03-03",
+      "max_date": "2026-06-30",
+      "n_rows": 480,
+      "n_regions": 4,
+      "n_dates": 120,
+      "harvest_days": 192
+    },
+    "margin_by_region": [
+      {
+        "region_key": "lampung",
+        "n_rows": 120,
+        "period_margin_idr_per_ha": 5360560128.0,
+        "harvest_days": 64
+      },
+      {
+        "region_key": "riau",
+        "n_rows": 120,
+        "period_margin_idr_per_ha": 4804958853.0,
+        "harvest_days": 54
+      },
+      {
+        "region_key": "north_sumatra",
+        "n_rows": 120,
+        "period_margin_idr_per_ha": 3898222057.0,
+        "harvest_days": 48
+      },
+      {
+        "region_key": "central_kalimantan",
+        "n_rows": 120,
+        "period_margin_idr_per_ha": 1781136087.0,
+        "harvest_days": 26
+      }
+    ],
+    "margin_by_month": [
+      {
+        "month_start": "2026-03-01",
+        "region_key": "central_kalimantan",
+        "month_margin_idr_per_ha": 748024241.0,
+        "harvest_days": 11,
+        "calendar_days": 29
+      },
+      {
+        "month_start": "2026-03-01",
+        "region_key": "lampung",
+        "month_margin_idr_per_ha": 1203131442.0,
+        "harvest_days": 15,
+        "calendar_days": 29
+      },
+      {
+        "month_start": "2026-03-01",
+        "region_key": "north_sumatra",
+        "month_margin_idr_per_ha": 1506723622.0,
+        "harvest_days": 19,
+        "calendar_days": 29
+      },
+      {
+        "month_start": "2026-03-01",
+        "region_key": "riau",
+        "month_margin_idr_per_ha": 1461870903.0,
+        "harvest_days": 17,
+        "calendar_days": 29
+      },
+      {
+        "month_start": "2026-04-01",
+        "region_key": "central_kalimantan",
+        "month_margin_idr_per_ha": 194672629.0,
+        "harvest_days": 3,
+        "calendar_days": 30
+      },
+      {
+        "month_start": "2026-04-01",
+        "region_key": "lampung",
+        "month_margin_idr_per_ha": 1089134076.0,
+        "harvest_days": 13,
+        "calendar_days": 30
+      },
+      {
+        "month_start": "2026-04-01",
+        "region_key": "north_sumatra",
+        "month_margin_idr_per_ha": 990750092.0,
+        "harvest_days": 12,
+        "calendar_days": 30
+      },
+      {
+        "month_start": "2026-04-01",
+        "region_key": "riau",
+        "month_margin_idr_per_ha": 1075257877.0,
+        "harvest_days": 12,
+        "calendar_days": 30
+      },
+      {
+        "month_start": "2026-05-01",
+        "region_key": "central_kalimantan",
+        "month_margin_idr_per_ha": 122520945.0,
+        "harvest_days": 2,
+        "calendar_days": 31
+      },
+      {
+        "month_start": "2026-05-01",
+        "region_key": "lampung",
+        "month_margin_idr_per_ha": 1284053495.0,
+        "harvest_days": 15,
+        "calendar_days": 31
+      },
+      {
+        "month_start": "2026-05-01",
+        "region_key": "north_sumatra",
+        "month_margin_idr_per_ha": 405335770.0,
+        "harvest_days": 5,
+        "calendar_days": 31
+      },
+      {
+        "month_start": "2026-05-01",
+        "region_key": "riau",
+        "month_margin_idr_per_ha": 726504491.0,
+        "harvest_days": 8,
+        "calendar_days": 31
+      },
+      {
+        "month_start": "2026-06-01",
+        "region_key": "central_kalimantan",
+        "month_margin_idr_per_ha": 715918272.0,
+        "harvest_days": 10,
+        "calendar_days": 30
+      },
+      {
+        "month_start": "2026-06-01",
+        "region_key": "lampung",
+        "month_margin_idr_per_ha": 1784241115.0,
+        "harvest_days": 21,
+        "calendar_days": 30
+      },
+      {
+        "month_start": "2026-06-01",
+        "region_key": "north_sumatra",
+        "month_margin_idr_per_ha": 995412573.0,
+        "harvest_days": 12,
+        "calendar_days": 30
+      },
+      {
+        "month_start": "2026-06-01",
+        "region_key": "riau",
+        "month_margin_idr_per_ha": 1541325582.0,
+        "harvest_days": 17,
+        "calendar_days": 30
+      }
+    ],
+    "price_span": {
+      "min_date": "2026-03-03",
+      "max_date": "2026-09-27",
+      "n_rows": 209,
+      "min_palm_usd": 1104.0,
+      "max_palm_usd": 1146.0,
+      "min_palm_idr": 18692195.0,
+      "max_palm_idr": 20278736.0,
+      "min_usd_idr": 16855.0,
+      "max_usd_idr": 18151.0
+    },
+    "price_by_month": [
+      {
+        "month_start": "2026-03-01",
+        "n_days": 29,
+        "palm_usd": 1109.0,
+        "palm_usd_max": 1109.0,
+        "soy_usd": 1493.0,
+        "soy_usd_max": 1493.0,
+        "spread_usd": -384.0,
+        "spread_usd_max": -384.0,
+        "fx_min": 16855.0,
+        "fx_max": 17018.0,
+        "idr_min": 18692195.0,
+        "idr_max": 18872962.0
+      },
+      {
+        "month_start": "2026-04-01",
+        "n_days": 30,
+        "palm_usd": 1146.0,
+        "palm_usd_max": 1146.0,
+        "soy_usd": 1643.0,
+        "soy_usd_max": 1643.0,
+        "spread_usd": -497.0,
+        "spread_usd_max": -497.0,
+        "fx_min": 16914.0,
+        "fx_max": 17348.0,
+        "idr_min": 19383444.0,
+        "idr_max": 19880808.0
+      },
+      {
+        "month_start": "2026-05-01",
+        "n_days": 31,
+        "palm_usd": 1136.0,
+        "palm_usd_max": 1136.0,
+        "soy_usd": 1781.0,
+        "soy_usd_max": 1781.0,
+        "spread_usd": -645.0,
+        "spread_usd_max": -645.0,
+        "fx_min": 17298.0,
+        "fx_max": 17851.0,
+        "idr_min": 19650528.0,
+        "idr_max": 20278736.0
+      },
+      {
+        "month_start": "2026-06-01",
+        "n_days": 30,
+        "palm_usd": 1104.0,
+        "palm_usd_max": 1104.0,
+        "soy_usd": 1740.0,
+        "soy_usd_max": 1740.0,
+        "spread_usd": -636.0,
+        "spread_usd_max": -636.0,
+        "fx_min": 17719.0,
+        "fx_max": 18151.0,
+        "idr_min": 19561776.0,
+        "idr_max": 20038704.0
+      },
+      {
+        "month_start": "2026-07-01",
+        "n_days": 31,
+        "palm_usd": 1104.0,
+        "palm_usd_max": 1104.0,
+        "soy_usd": 1740.0,
+        "soy_usd_max": 1740.0,
+        "spread_usd": -636.0,
+        "spread_usd_max": -636.0,
+        "fx_min": 17903.0,
+        "fx_max": 17903.0,
+        "idr_min": 19764912.0,
+        "idr_max": 19764912.0
+      },
+      {
+        "month_start": "2026-08-01",
+        "n_days": 31,
+        "palm_usd": 1104.0,
+        "palm_usd_max": 1104.0,
+        "soy_usd": 1740.0,
+        "soy_usd_max": 1740.0,
+        "spread_usd": -636.0,
+        "spread_usd_max": -636.0,
+        "fx_min": 17903.0,
+        "fx_max": 17903.0,
+        "idr_min": 19764912.0,
+        "idr_max": 19764912.0
+      },
+      {
+        "month_start": "2026-09-01",
+        "n_days": 27,
+        "palm_usd": 1104.0,
+        "palm_usd_max": 1104.0,
+        "soy_usd": 1740.0,
+        "soy_usd_max": 1740.0,
+        "spread_usd": -636.0,
+        "spread_usd_max": -636.0,
+        "fx_min": 17903.0,
+        "fx_max": 17903.0,
+        "idr_min": 19764912.0,
+        "idr_max": 19764912.0
+      }
+    ],
+    "forecast_health": {
+      "n_rows": 30,
+      "min_date": "2026-09-28",
+      "max_date": "2026-10-27",
+      "distinct_forecasts": 1,
+      "forecast_usd": 1104.0,
+      "forecast_usd_max": 1104.0,
+      "band_min": 0.0,
+      "band_max": 0.0,
+      "overlap_days": 0
+    },
+    "latest_price": {
+      "price_date": "2026-09-27",
+      "palm_oil_usd": 1104.0,
+      "usd_idr": 17903.0,
+      "palm_oil_idr": 19764912.0
+    },
+    "anomaly_by_region": [
+      {
+        "region_key": "central_kalimantan",
+        "n_rows": 60,
+        "min_date": "2026-05-02",
+        "max_date": "2026-06-30",
+        "rainfall_deficit_days": 0,
+        "price_spike_days": 6
+      },
+      {
+        "region_key": "lampung",
+        "n_rows": 60,
+        "min_date": "2026-05-02",
+        "max_date": "2026-06-30",
+        "rainfall_deficit_days": 0,
+        "price_spike_days": 6
+      },
+      {
+        "region_key": "north_sumatra",
+        "n_rows": 60,
+        "min_date": "2026-05-02",
+        "max_date": "2026-06-30",
+        "rainfall_deficit_days": 0,
+        "price_spike_days": 6
+      },
+      {
+        "region_key": "riau",
+        "n_rows": 60,
+        "min_date": "2026-05-02",
+        "max_date": "2026-06-30",
+        "rainfall_deficit_days": 2,
+        "price_spike_days": 6
+      }
+    ],
+    "anomaly_latest_day": [
+      {
+        "operation_date": "2026-06-30",
+        "region_key": "central_kalimantan",
+        "is_rainfall_deficit": false,
+        "is_price_spike": false
+      },
+      {
+        "operation_date": "2026-06-30",
+        "region_key": "lampung",
+        "is_rainfall_deficit": false,
+        "is_price_spike": false
+      },
+      {
+        "operation_date": "2026-06-30",
+        "region_key": "north_sumatra",
+        "is_rainfall_deficit": false,
+        "is_price_spike": false
+      },
+      {
+        "operation_date": "2026-06-30",
+        "region_key": "riau",
+        "is_rainfall_deficit": false,
+        "is_price_spike": false
+      }
+    ],
+    "whatif_price_only": [
+      {
+        "region_key": "central_kalimantan",
+        "scenario": "palm_-20pct",
+        "palm_mult": "0.80",
+        "fx_mult": "1.00",
+        "shocked_cpo_idr": 15811930.0,
+        "shocked_margin_idr_per_ha": 58270785.0
+      },
+      {
+        "region_key": "central_kalimantan",
+        "scenario": "palm_-10pct",
+        "palm_mult": "0.90",
+        "fx_mult": "1.00",
+        "shocked_cpo_idr": 17788421.0,
+        "shocked_margin_idr_per_ha": 65824934.0
+      },
+      {
+        "region_key": "central_kalimantan",
+        "scenario": "base",
+        "palm_mult": "1.00",
+        "fx_mult": "1.00",
+        "shocked_cpo_idr": 19764912.0,
+        "shocked_margin_idr_per_ha": 73379084.0
+      },
+      {
+        "region_key": "central_kalimantan",
+        "scenario": "palm_+10pct",
+        "palm_mult": "1.10",
+        "fx_mult": "1.00",
+        "shocked_cpo_idr": 21741403.0,
+        "shocked_margin_idr_per_ha": 80933233.0
+      },
+      {
+        "region_key": "central_kalimantan",
+        "scenario": "palm_+20pct",
+        "palm_mult": "1.20",
+        "fx_mult": "1.00",
+        "shocked_cpo_idr": 23717894.0,
+        "shocked_margin_idr_per_ha": 88487382.0
+      },
+      {
+        "region_key": "lampung",
+        "scenario": "palm_-20pct",
+        "palm_mult": "0.80",
+        "fx_mult": "1.00",
+        "shocked_cpo_idr": 15811930.0,
+        "shocked_margin_idr_per_ha": 67845897.0
+      },
+      {
+        "region_key": "lampung",
+        "scenario": "palm_-10pct",
+        "palm_mult": "0.90",
+        "fx_mult": "1.00",
+        "shocked_cpo_idr": 17788421.0,
+        "shocked_margin_idr_per_ha": 76585941.0
+      },
+      {
+        "region_key": "lampung",
+        "scenario": "base",
+        "palm_mult": "1.00",
+        "fx_mult": "1.00",
+        "shocked_cpo_idr": 19764912.0,
+        "shocked_margin_idr_per_ha": 85325985.0
+      },
+      {
+        "region_key": "lampung",
+        "scenario": "palm_+10pct",
+        "palm_mult": "1.10",
+        "fx_mult": "1.00",
+        "shocked_cpo_idr": 21741403.0,
+        "shocked_margin_idr_per_ha": 94066029.0
+      },
+      {
+        "region_key": "lampung",
+        "scenario": "palm_+20pct",
+        "palm_mult": "1.20",
+        "fx_mult": "1.00",
+        "shocked_cpo_idr": 23717894.0,
+        "shocked_margin_idr_per_ha": 102806073.0
+      },
+      {
+        "region_key": "north_sumatra",
+        "scenario": "palm_-20pct",
+        "palm_mult": "0.80",
+        "fx_mult": "1.00",
+        "shocked_cpo_idr": 15811930.0,
+        "shocked_margin_idr_per_ha": 66853365.0
+      },
+      {
+        "region_key": "north_sumatra",
+        "scenario": "palm_-10pct",
+        "palm_mult": "0.90",
+        "fx_mult": "1.00",
+        "shocked_cpo_idr": 17788421.0,
+        "shocked_margin_idr_per_ha": 75462961.0
+      },
+      {
+        "region_key": "north_sumatra",
+        "scenario": "base",
+        "palm_mult": "1.00",
+        "fx_mult": "1.00",
+        "shocked_cpo_idr": 19764912.0,
+        "shocked_margin_idr_per_ha": 84072557.0
+      },
+      {
+        "region_key": "north_sumatra",
+        "scenario": "palm_+10pct",
+        "palm_mult": "1.10",
+        "fx_mult": "1.00",
+        "shocked_cpo_idr": 21741403.0,
+        "shocked_margin_idr_per_ha": 92682152.0
+      },
+      {
+        "region_key": "north_sumatra",
+        "scenario": "palm_+20pct",
+        "palm_mult": "1.20",
+        "fx_mult": "1.00",
+        "shocked_cpo_idr": 23717894.0,
+        "shocked_margin_idr_per_ha": 101291748.0
+      },
+      {
+        "region_key": "riau",
+        "scenario": "palm_-20pct",
+        "palm_mult": "0.80",
+        "fx_mult": "1.00",
+        "shocked_cpo_idr": 15811930.0,
+        "shocked_margin_idr_per_ha": 72634577.0
+      },
+      {
+        "region_key": "riau",
+        "scenario": "palm_-10pct",
+        "palm_mult": "0.90",
+        "fx_mult": "1.00",
+        "shocked_cpo_idr": 17788421.0,
+        "shocked_margin_idr_per_ha": 81983380.0
+      },
+      {
+        "region_key": "riau",
+        "scenario": "base",
+        "palm_mult": "1.00",
+        "fx_mult": "1.00",
+        "shocked_cpo_idr": 19764912.0,
+        "shocked_margin_idr_per_ha": 91332184.0
+      },
+      {
+        "region_key": "riau",
+        "scenario": "palm_+10pct",
+        "palm_mult": "1.10",
+        "fx_mult": "1.00",
+        "shocked_cpo_idr": 21741403.0,
+        "shocked_margin_idr_per_ha": 100680987.0
+      },
+      {
+        "region_key": "riau",
+        "scenario": "palm_+20pct",
+        "palm_mult": "1.20",
+        "fx_mult": "1.00",
+        "shocked_cpo_idr": 23717894.0,
+        "shocked_margin_idr_per_ha": 110029791.0
+      }
+    ],
+    "plan_columns": []
+  }
+}
