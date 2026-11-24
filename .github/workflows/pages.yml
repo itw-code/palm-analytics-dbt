@@ -148,6 +148,9 @@ jobs:
           npm run sources
           npm run build
 
+      - name: Publish Proof Room workbench to Pages
+        run: cp tableau/dashboard.html dashboard/build/workbench.html
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
