@@ -102,8 +102,9 @@ npm run dev        # http://localhost:3000
 
 Read-only CSV extracts exported from `palm.duckdb` (`tableau/export.py --check`) power the companion Tableau Public workbook and an interactive diagnostic workbench generated via [`tableau/build_dashboard.py`](tableau/build_dashboard.py):
 
-- **Published Tableau Public workbook:** https://public.tableau.com/views/Estatemarginbyregion/Dashboard1
+- **Published Tableau Public workbook:** https://public.tableau.com/app/profile/ihsan.tri.wanda/viz/palm_estate_margin_workbench/PalmEstateOperationsMarginWorkbench
 - **Live Proof Room workbench (GitHub Pages):** https://itw-code.github.io/palm-analytics-dbt/workbench.html
+- **Reproducible `.twbx` generator:** [`tableau/build_tableau_workbook.py`](tableau/build_tableau_workbook.py) → [`tableau/palm_estate_margin_workbench.twbx`](tableau/palm_estate_margin_workbench.twbx) (built programmatically via `cwtwb` + `tableauhyperapi`)
 - **Extract dictionary & conventions:** [`tableau/README.md`](tableau/README.md)
 - **Workbook build specification:** [`tableau/BUILD.md`](tableau/BUILD.md)
 - **Interactive local Proof Room workbench:** [`tableau/dashboard.html`](tableau/dashboard.html) (margin drift, daily cumulative trajectory, 120-day weather/labour calendar, variance waterfall, footprint quadrant, commodity/FX small multiples, and 9-scenario Price × FX stress matrix)

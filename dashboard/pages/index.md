@@ -154,7 +154,7 @@ order by r.region_name
 2. **What happened (2 min)** — the [operations planner](/operations): per-region daily history behind today's call.
 3. **What it's worth (1 min)** — [margin per hectare](/margin) and the [palm-vs-soy market](/market): the price story in local currency.
 4. **Why trust it (1 min)** — [methodology](/methodology) for the pipeline, [trust page](/status) for freshness, lake snapshot, and test counts.
-5. **Deep-dive diagnostics** — open the [Proof Room Diagnostic Workbench](https://itw-code.github.io/palm-analytics-dbt/workbench.html) (margin variance waterfall, 120-day weather/labour calendar, 9-scenario Price × FX stress matrix) or explore the [Tableau Public workbook](https://public.tableau.com/views/Estatemarginbyregion/Dashboard1).
+5. **Deep-dive diagnostics** — open the [Proof Room Diagnostic Workbench](https://itw-code.github.io/palm-analytics-dbt/workbench.html) (margin variance waterfall, 120-day weather/labour calendar, 9-scenario Price × FX stress matrix) or explore the [Tableau Public workbook](https://public.tableau.com/app/profile/ihsan.tri.wanda/viz/palm_estate_margin_workbench/PalmEstateOperationsMarginWorkbench).
 
 {:else}
 
@@ -201,7 +201,7 @@ Harga Bank Dunia keluarnya bulanan — jadi grafiknya tangga datar itu normal, b
 2. **Kemarin gimana (2 mnt)** — [jadwal operasi](/operations): catatan harian per kebun yang jadi dasar keputusan hari ini.
 3. **Cuannya berapa (1 mnt)** — [margin per hektar](/margin) dan [pasar sawit vs kedelai](/market): cerita harga dalam rupiah.
 4. **Kok bisa dipercaya (1 mnt)** — [cara kerja](/methodology) buat daleman pipa datanya, [halaman pantauan](/status) buat kesegaran data dan hasil tes.
-5. **Analisis mendalam** — buka [Proof Room Diagnostic Workbench](https://itw-code.github.io/palm-analytics-dbt/workbench.html) (waterfall varians margin, kalender cuaca/tenaga kerja 120 hari, matriks uji stres Harga × Kurs 9 skenario) atau lihat [workbook Tableau Public](https://public.tableau.com/views/Estatemarginbyregion/Dashboard1).
+5. **Analisis mendalam** — buka [Proof Room Diagnostic Workbench](https://itw-code.github.io/palm-analytics-dbt/workbench.html) (waterfall varians margin, kalender cuaca/tenaga kerja 120 hari, matriks uji stres Harga × Kurs 9 skenario) atau lihat [workbook Tableau Public](https://public.tableau.com/app/profile/ihsan.tri.wanda/viz/palm_estate_margin_workbench/PalmEstateOperationsMarginWorkbench).
 
 {/if}
 

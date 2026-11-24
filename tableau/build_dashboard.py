@@ -725,7 +725,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   <div class="topbar-inner">
     <div class="brand-block">
       <h1 class="brand-title">Palm estate operations and margin workbench</h1>
-      <p class="brand-meta">3 Mar–30 Jun 2026 operations · 27 Sep 2026 commodity base · dbt PASS=129 · <a href="https://public.tableau.com/views/Estatemarginbyregion/Dashboard1" target="_blank" rel="noopener">Tableau Public workbook</a></p>
+      <p class="brand-meta">3 Mar–30 Jun 2026 operations · 27 Sep 2026 commodity base · dbt PASS=129 · <a href="https://public.tableau.com/app/profile/ihsan.tri.wanda/viz/palm_estate_margin_workbench/PalmEstateOperationsMarginWorkbench" target="_blank" rel="noopener">Tableau Public workbook</a></p>
     </div>
     <div class="controls-bar">
       <div class="seg-group" id="global-estate-pills" role="group" aria-label="Filter by estate"></div>
@@ -918,7 +918,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 
   <footer class="footer">
     <span>Source extracts: fct_estate_margin_daily · fct_estate_operations_daily · fct_commodity_price_daily · rec_anomaly_flags · whatif_margin_shocks · dim_region</span>
-    <span><a href="https://public.tableau.com/views/Estatemarginbyregion/Dashboard1" target="_blank" rel="noopener">Open published Tableau Public workbook</a> · Rebuilt via tableau/build_dashboard.py</span>
+    <span><a href="https://public.tableau.com/app/profile/ihsan.tri.wanda/viz/palm_estate_margin_workbench/PalmEstateOperationsMarginWorkbench" target="_blank" rel="noopener">Open published Tableau Public workbook</a> · Rebuilt via tableau/build_dashboard.py</span>
   </footer>
 </main>
 

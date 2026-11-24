@@ -8,8 +8,8 @@ Worksheet sources for a Tableau Public portfolio workbook. Generated from `palm.
 
 `tableau/dashboard.html` is a self-contained analytical workbench compiled from these certified extracts via `tableau/build_dashboard.py`. It aligns with `BUILD.md` and the Proof Room visual system while adding daily cumulative trajectories, weather/labour blocking decomposition, margin variance waterfall bridges, and the full 9-scenario Price × FX stress matrix. It is not a `.twbx`. Open that file in the `ihsan.wanda@sawitpro.com` Chrome profile (Profile 3). Click an estate to filter the trend. The shock buttons are the price parameter, not a scenario filter.
 
-Published Tableau Public dashboard: https://public.tableau.com/views/Estatemarginbyregion/Dashboard1
-Sheet-only bar: https://public.tableau.com/views/Estatemarginbyregion/Sheet1
+Published Tableau Public workbench: https://public.tableau.com/app/profile/ihsan.tri.wanda/viz/palm_estate_margin_workbench/PalmEstateOperationsMarginWorkbench
+Reproducible .twbx generator: tableau/build_tableau_workbook.py -> tableau/palm_estate_margin_workbench.twbx
 Older text table: https://public.tableau.com/views/Palmestatemargin/Sheet1
 Account `oneda9@gmail.com` (display name Ihsan Tri Wanda). Password is in `C:\Users\oneda\.omp\tableau-public-oneda9.txt`, outside this repo.
 

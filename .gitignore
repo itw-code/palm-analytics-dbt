@@ -37,3 +37,7 @@ checkpoint.md
 
 # generated debug artifact from scripts/generate_status.py (page reads DuckDB status_summary instead)
 dashboard/static/status.json
+
+# Tableau generated Hyper extracts & Desktop lock/recovery files
+tableau/extracts/
+tableau/~*.twbr
