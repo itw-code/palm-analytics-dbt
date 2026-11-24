@@ -13,7 +13,10 @@ description: Keputusan pagi buat kebun sawit Indonesia — kapan mupuk, manen, a
 <p style="font-family:Georgia,'Palatino Linotype',serif;font-size:clamp(24px,3.4vw,34px);line-height:1.25;font-weight:700;margin:0 0 10px 0;">Every morning at 06:00 WIB, an estate manager decides: fertilize, harvest, or spray — per region.</p>
 <p style="font-size:15px;line-height:1.6;margin:0 0 10px 0;">A wrong day wastes fertilizer, loses yield, and idles labour. This page turns today's weather, price, and labour availability into a go/no-go per region — and prices what a good harvest day is worth.</p>
 <p style="font-size:13px;opacity:0.75;margin:0 0 14px 0;">Open-Meteo + Frankfurter + Nager.Date + World Bank → DuckDB → dbt → this page. Refreshed daily.</p>
+<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
 <a href="/forecast" style="display:inline-block;background:#1F7A80;color:#F7F4EE;padding:10px 18px;border-radius:3px;text-decoration:none;font-weight:600;font-size:14px;">Open the 7-day plan →</a>
+<a href="/palm-analytics-dbt/workbench.html" rel="external" style="display:inline-block;border:1px solid #1F7A80;color:#1F7A80;padding:10px 18px;border-radius:3px;text-decoration:none;font-weight:600;font-size:14px;">Open Proof Room Workbench →</a>
+</div>
 </div>
 </div>
 
@@ -25,7 +28,10 @@ description: Keputusan pagi buat kebun sawit Indonesia — kapan mupuk, manen, a
 <p style="font-family:Georgia,'Palatino Linotype',serif;font-size:clamp(24px,3.4vw,34px);line-height:1.25;font-weight:700;margin:0 0 10px 0;">Tiap pagi jam 06:00 WIB, mandor putuskan: hari ini mupuk, manen, atau nyemprot — per kebun.</p>
 <p style="font-size:15px;line-height:1.6;margin:0 0 10px 0;">Salah hari = pupuk kebuang, buah kepanen jelek, tim nganggur dibayar. Halaman ini ngubah cuaca hari ini + harga + ketersediaan tim jadi lampu hijau/merah per kebun — plus ngitung sehari panen yang bagus itu cuannya berapa.</p>
 <p style="font-size:13px;opacity:0.75;margin:0 0 14px 0;">Cuaca + kurs + hari libur + harga CPO → diolah dbt → jadi halaman ini. Update tiap hari.</p>
+<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
 <a href="/forecast" style="display:inline-block;background:#1F7A80;color:#F7F4EE;padding:10px 18px;border-radius:3px;text-decoration:none;font-weight:600;font-size:14px;">Buka rencana 7 hari →</a>
+<a href="/palm-analytics-dbt/workbench.html" rel="external" style="display:inline-block;border:1px solid #1F7A80;color:#1F7A80;padding:10px 18px;border-radius:3px;text-decoration:none;font-weight:600;font-size:14px;">Buka Workbench Analitik →</a>
+</div>
 </div>
 <svg width="200" height="150" viewBox="0 0 200 150" fill="none" aria-hidden="true" style="flex:0 0 auto;opacity:0.4;">
 <path d="M-5,25 Q50,12 105,24 T205,20" stroke="#1F7A80" stroke-width="1.5"/>
@@ -148,6 +154,7 @@ order by r.region_name
 2. **What happened (2 min)** — the [operations planner](/operations): per-region daily history behind today's call.
 3. **What it's worth (1 min)** — [margin per hectare](/margin) and the [palm-vs-soy market](/market): the price story in local currency.
 4. **Why trust it (1 min)** — [methodology](/methodology) for the pipeline, [trust page](/status) for freshness, lake snapshot, and test counts.
+5. **Deep-dive diagnostics** — open the [Proof Room Diagnostic Workbench](https://itw-code.github.io/palm-analytics-dbt/workbench.html) (margin variance waterfall, 120-day weather/labour calendar, 9-scenario Price × FX stress matrix) or explore the [Tableau Public workbook](https://public.tableau.com/views/Estatemarginbyregion/Dashboard1).
 
 {:else}
 
@@ -194,6 +201,7 @@ Harga Bank Dunia keluarnya bulanan — jadi grafiknya tangga datar itu normal, b
 2. **Kemarin gimana (2 mnt)** — [jadwal operasi](/operations): catatan harian per kebun yang jadi dasar keputusan hari ini.
 3. **Cuannya berapa (1 mnt)** — [margin per hektar](/margin) dan [pasar sawit vs kedelai](/market): cerita harga dalam rupiah.
 4. **Kok bisa dipercaya (1 mnt)** — [cara kerja](/methodology) buat daleman pipa datanya, [halaman pantauan](/status) buat kesegaran data dan hasil tes.
+5. **Analisis mendalam** — buka [Proof Room Diagnostic Workbench](https://itw-code.github.io/palm-analytics-dbt/workbench.html) (waterfall varians margin, kalender cuaca/tenaga kerja 120 hari, matriks uji stres Harga × Kurs 9 skenario) atau lihat [workbook Tableau Public](https://public.tableau.com/views/Estatemarginbyregion/Dashboard1).
 
 {/if}
 

@@ -61,6 +61,8 @@ order by operation_date
 
 *Formula: `revenue = CPO_IDR * yield * extraction_rate` (only on effective harvest days); `margin_per_ha = revenue - fertilizer - harvest - transport`, else `-fertilizer`. Edit `cost_assumptions.csv` and the margin rebuilds everywhere.*
 
+*For estate variance waterfalls, 120-day weather/labour calendars, and 9-scenario Price × FX stress testing, open the interactive [Proof Room Diagnostic Workbench](https://itw-code.github.io/palm-analytics-dbt/workbench.html) or explore the [Tableau Public workbook](https://public.tableau.com/views/Estatemarginbyregion/Dashboard1).*
+
 {:else}
 
 <DataTable data={margin_recent} rows=15>
@@ -77,5 +79,7 @@ order by operation_date
 <LineChart data={margin_trend} x=operation_date y=avg_margin_ha title="Rata-rata cuan per hektar per hari" xAxisTitle="Tanggal" yAxisTitle="Rp / ha" yFmt="#,##0"/>
 
 *Rumusnya: `masuk = CPO_Rp * tonase * rendemen` (cuma jalan pas hari panen efektif); `bersih_per_ha = masuk - pupuk - panen - angkut`, kalau nggak panen ya `-pupuk`. Ubah `cost_assumptions.csv`, margin ngitung ulang semua.*
+
+*Untuk waterfall varians per kebun, kalender cuaca/tenaga kerja 120 hari, dan uji stres Harga × Kurs 9 skenario, buka [Proof Room Diagnostic Workbench](https://itw-code.github.io/palm-analytics-dbt/workbench.html) atau jelajahi [workbook Tableau Public](https://public.tableau.com/views/Estatemarginbyregion/Dashboard1).*
 
 {/if}
