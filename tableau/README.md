@@ -6,7 +6,7 @@ Worksheet sources for a Tableau Public portfolio workbook. Generated from `palm.
 
 ## Browser view
 
-`tableau/dashboard.html` is a self-contained DOM reconstruction of `BUILD.md`. It is not a `.twbx`. Open that file in the `ihsan.wanda@sawitpro.com` Chrome profile (Profile 3). Click an estate to filter the trend. The shock buttons are the price parameter, not a scenario filter.
+`tableau/dashboard.html` is a self-contained analytical workbench compiled from these certified extracts via `tableau/build_dashboard.py`. It aligns with `BUILD.md` and the Proof Room visual system while adding daily cumulative trajectories, weather/labour blocking decomposition, margin variance waterfall bridges, and the full 9-scenario Price × FX stress matrix. It is not a `.twbx`. Open that file in the `ihsan.wanda@sawitpro.com` Chrome profile (Profile 3). Click an estate to filter the trend. The shock buttons are the price parameter, not a scenario filter.
 
 Published Tableau Public dashboard: https://public.tableau.com/views/Estatemarginbyregion/Dashboard1
 Sheet-only bar: https://public.tableau.com/views/Estatemarginbyregion/Sheet1
@@ -22,6 +22,7 @@ From the repo root, after `palm.duckdb` already exists:
 ```text
 .venv/Scripts/python.exe tableau/export.py
 .venv/Scripts/python.exe tableau/export.py --check
+.venv/Scripts/python.exe tableau/build_dashboard.py
 ```
 
 The script opens the warehouse read-only, writes one CSV per model at native grain, re-opens each CSV, and exits non-zero if a CSV row count differs from the mart, a dimension key is null, or a grain combination is duplicated. It does not run dbt and it does not insert rows.
@@ -54,13 +55,20 @@ July–September prices are not a fresh market. The ingest manifest for this war
 Checked after `dbt build` on 2026-10-24, then re-checked by re-opening each CSV.
 
 | Extract | dbt model | Grain | Mart rows | CSV rows | Null keys | Duplicate grains |
-|---|---|---|---|---:|---:|---:|
+|---|---|---|---:|---:|---:|---:|
 | `fct_estate_margin_daily__region_date.csv` | `fct_estate_margin_daily` | `region_key`, `operation_date` | 480 | 480 | 0 | 0 |
+| `fct_estate_operations_daily__region_date.csv` | `fct_estate_operations_daily` | `region_key`, `operation_date` | 480 | 480 | 0 | 0 |
 | `fct_commodity_price_daily__price_date.csv` | `fct_commodity_price_daily` | `price_date` | 209 | 209 | 0 | 0 |
 | `forecast_cpo_30day__forecast_date.csv` | `forecast_cpo_30day` | `forecast_date` | 30 | 30 | 0 | 0 |
 | `rec_anomaly_flags__region_date.csv` | `rec_anomaly_flags` | `region_key`, `operation_date` | 240 | 240 | 0 | 0 |
 | `whatif_margin_shocks__region_scenario.csv` | `whatif_margin_shocks` | `region_key`, `scenario` | 36 | 36 | 0 | 0 |
 | `dim_region__region_key.csv` | `dim_region` | `region_key` | 4 | 4 | 0 | 0 |
+
+## fct_estate_operations_daily__region_date.csv
+
+Model: `models/marts/fct_estate_operations_daily.sql`.
+
+Grain: one row per estate per operations day (`2026-03-03` through `2026-06-30`, 480 rows). Supplies daily weather measurements (`precip_mm`, `soil_moisture`, `water_deficit_mm`) and boolean gate flags (`is_harvest_favorable`, `is_fertilize_favorable`, `is_spray_favorable`, `is_holiday`, `is_weekend`, `is_effective_harvest_day`) for root-cause blocking analysis.
 
 ## fct_estate_margin_daily__region_date.csv
 

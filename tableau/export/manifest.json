@@ -39,6 +39,49 @@
       "duplicate_grains": 0
     },
     {
+      "file": "fct_estate_operations_daily__region_date.csv",
+      "model": "fct_estate_operations_daily",
+      "grain": [
+        "region_key",
+        "operation_date"
+      ],
+      "keys": [
+        "operations_key",
+        "region_key",
+        "operation_date"
+      ],
+      "columns": [
+        "operations_key",
+        "region_key",
+        "operation_date",
+        "temp_mean_c",
+        "precip_mm",
+        "wind_max_kmh",
+        "et0_mm",
+        "humidity_pct",
+        "soil_moisture",
+        "water_deficit_mm",
+        "is_fertilize_favorable",
+        "is_harvest_favorable",
+        "is_spray_favorable",
+        "is_holiday",
+        "is_weekend",
+        "is_effective_harvest_day",
+        "cpo_usd_per_tonne",
+        "usd_idr",
+        "cpo_idr_per_tonne",
+        "harvest_day_value_idr"
+      ],
+      "mart_rows": 480,
+      "csv_rows": 480,
+      "null_keys": {
+        "operations_key": 0,
+        "region_key": 0,
+        "operation_date": 0
+      },
+      "duplicate_grains": 0
+    },
+    {
       "file": "fct_commodity_price_daily__price_date.csv",
       "model": "fct_commodity_price_daily",
       "grain": [
@@ -673,6 +716,110 @@
         "fx_mult": "1.00",
         "shocked_cpo_idr": 23717894.0,
         "shocked_margin_idr_per_ha": 110029791.0
+      }
+    ],
+    "operations_blocking_by_region": [
+      {
+        "region_key": "lampung",
+        "total_days": 120,
+        "effective_harvest_days": 64,
+        "holiday_blocked_days": 3,
+        "weekend_blocked_days": 21,
+        "weather_blocked_days": 32,
+        "fertilize_favorable_days": 19,
+        "spray_favorable_days": 40,
+        "avg_precip_mm": 6.01,
+        "avg_soil_moisture": 0.354
+      },
+      {
+        "region_key": "riau",
+        "total_days": 120,
+        "effective_harvest_days": 54,
+        "holiday_blocked_days": 2,
+        "weekend_blocked_days": 26,
+        "weather_blocked_days": 38,
+        "fertilize_favorable_days": 41,
+        "spray_favorable_days": 47,
+        "avg_precip_mm": 7.76,
+        "avg_soil_moisture": 0.225
+      },
+      {
+        "region_key": "north_sumatra",
+        "total_days": 120,
+        "effective_harvest_days": 48,
+        "holiday_blocked_days": 5,
+        "weekend_blocked_days": 17,
+        "weather_blocked_days": 50,
+        "fertilize_favorable_days": 36,
+        "spray_favorable_days": 37,
+        "avg_precip_mm": 9.56,
+        "avg_soil_moisture": 0.266
+      },
+      {
+        "region_key": "central_kalimantan",
+        "total_days": 120,
+        "effective_harvest_days": 26,
+        "holiday_blocked_days": 1,
+        "weekend_blocked_days": 11,
+        "weather_blocked_days": 82,
+        "fertilize_favorable_days": 65,
+        "spray_favorable_days": 32,
+        "avg_precip_mm": 11.84,
+        "avg_soil_moisture": 0.284
+      }
+    ],
+    "unit_economics_by_region": [
+      {
+        "region_key": "lampung",
+        "total_days": 120,
+        "effective_harvest_days": 64,
+        "revenue_idr_per_ha": 5539245312.0,
+        "fertilizer_cost_idr_per_ha": 98400000.0,
+        "harvest_cost_idr_per_ha": 38400000.0,
+        "transport_cost_idr_per_ha": 41885184.0,
+        "net_margin_idr_per_ha": 5360560128.0,
+        "idle_drag_idr_per_ha": -45920000.0,
+        "avg_harvest_day_margin_idr_per_ha": 84476252.0,
+        "total_estate_margin_idr": 39668144961986.0
+      },
+      {
+        "region_key": "riau",
+        "total_days": 120,
+        "effective_harvest_days": 54,
+        "revenue_idr_per_ha": 4977474753.0,
+        "fertilizer_cost_idr_per_ha": 102000000.0,
+        "harvest_cost_idr_per_ha": 33480000.0,
+        "transport_cost_idr_per_ha": 37035900.0,
+        "net_margin_idr_per_ha": 4804958853.0,
+        "idle_drag_idr_per_ha": -56100000.0,
+        "avg_harvest_day_margin_idr_per_ha": 90019608.0,
+        "total_estate_margin_idr": 60061985676500.0
+      },
+      {
+        "region_key": "north_sumatra",
+        "total_days": 120,
+        "effective_harvest_days": 48,
+        "revenue_idr_per_ha": 4051505257.0,
+        "fertilizer_cost_idr_per_ha": 93600000.0,
+        "harvest_cost_idr_per_ha": 28320000.0,
+        "transport_cost_idr_per_ha": 31363200.0,
+        "net_margin_idr_per_ha": 3898222057.0,
+        "idle_drag_idr_per_ha": -56160000.0,
+        "avg_harvest_day_margin_idr_per_ha": 82382960.0,
+        "total_estate_margin_idr": 38202576176789.0
+      },
+      {
+        "region_key": "central_kalimantan",
+        "total_days": 120,
+        "effective_harvest_days": 26,
+        "revenue_idr_per_ha": 1923838747.0,
+        "fertilizer_cost_idr_per_ha": 110400000.0,
+        "harvest_cost_idr_per_ha": 16900000.0,
+        "transport_cost_idr_per_ha": 15402660.0,
+        "net_margin_idr_per_ha": 1781136087.0,
+        "idle_drag_idr_per_ha": -86480000.0,
+        "avg_harvest_day_margin_idr_per_ha": 71831388.0,
+        "total_estate_margin_idr": 27073268533650.0
       }
     ],
     "plan_columns": []

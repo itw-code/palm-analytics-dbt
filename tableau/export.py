@@ -35,6 +35,13 @@ EXTRACTS = (
         "order": ("region_key", "operation_date"),
     },
     {
+        "file": "fct_estate_operations_daily__region_date.csv",
+        "model": "fct_estate_operations_daily",
+        "grain": ("region_key", "operation_date"),
+        "keys": ("operations_key", "region_key", "operation_date"),
+        "order": ("region_key", "operation_date"),
+    },
+    {
         "file": "fct_commodity_price_daily__price_date.csv",
         "model": "fct_commodity_price_daily",
         "grain": ("price_date",),
@@ -281,6 +288,41 @@ def _profile(con: duckdb.DuckDBPyConnection) -> dict:
             from whatif_margin_shocks
             where fx_mult = 1
             order by region_key, palm_mult
+            """
+        ),
+        "operations_blocking_by_region": rows(
+            """
+            select region_key,
+                   count(*) as total_days,
+                   sum(case when is_effective_harvest_day then 1 else 0 end) as effective_harvest_days,
+                   sum(case when is_harvest_favorable and not is_effective_harvest_day and is_holiday then 1 else 0 end) as holiday_blocked_days,
+                   sum(case when is_harvest_favorable and not is_effective_harvest_day and is_weekend and not is_holiday then 1 else 0 end) as weekend_blocked_days,
+                   sum(case when not is_harvest_favorable then 1 else 0 end) as weather_blocked_days,
+                   sum(case when is_fertilize_favorable then 1 else 0 end) as fertilize_favorable_days,
+                   sum(case when is_spray_favorable then 1 else 0 end) as spray_favorable_days,
+                   round(avg(precip_mm), 2) as avg_precip_mm,
+                   round(avg(soil_moisture), 3) as avg_soil_moisture
+            from fct_estate_operations_daily
+            group by 1
+            order by effective_harvest_days desc
+            """
+        ),
+        "unit_economics_by_region": rows(
+            """
+            select region_key,
+                   count(*) as total_days,
+                   sum(case when is_effective_harvest_day then 1 else 0 end) as effective_harvest_days,
+                   round(sum(revenue_idr_per_ha), 0) as revenue_idr_per_ha,
+                   round(sum(fertilizer_cost_idr_per_ha), 0) as fertilizer_cost_idr_per_ha,
+                   round(sum(case when is_effective_harvest_day then harvest_cost_idr_per_ha else 0 end), 0) as harvest_cost_idr_per_ha,
+                   round(sum(transport_cost_idr_per_ha), 0) as transport_cost_idr_per_ha,
+                   round(sum(margin_idr_per_ha), 0) as net_margin_idr_per_ha,
+                   round(sum(case when not is_effective_harvest_day then margin_idr_per_ha else 0 end), 0) as idle_drag_idr_per_ha,
+                   round(avg(case when is_effective_harvest_day then margin_idr_per_ha end), 0) as avg_harvest_day_margin_idr_per_ha,
+                   round(sum(margin_total_idr), 0) as total_estate_margin_idr
+            from fct_estate_margin_daily
+            group by 1
+            order by net_margin_idr_per_ha desc
             """
         ),
         "plan_columns": rows(

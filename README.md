@@ -98,5 +98,14 @@ npm run sources
 npm run dev        # http://localhost:3000
 ```
 
+## Tableau Public Workbook
+
+Read-only CSV extracts exported from `palm.duckdb` (`tableau/export.py --check`) power the companion Tableau Public workbook and an interactive diagnostic workbench generated via [`tableau/build_dashboard.py`](tableau/build_dashboard.py):
+
+- **Published Tableau Public workbook:** https://public.tableau.com/views/Estatemarginbyregion/Dashboard1
+- **Extract dictionary & conventions:** [`tableau/README.md`](tableau/README.md)
+- **Workbook build specification:** [`tableau/BUILD.md`](tableau/BUILD.md)
+- **Interactive local Proof Room workbench:** [`tableau/dashboard.html`](tableau/dashboard.html) (margin drift, daily cumulative trajectory, 120-day weather/labour calendar, variance waterfall, footprint quadrant, commodity/FX small multiples, and 9-scenario Price × FX stress matrix)
+
 ## Stack
-Python · DuckDB / MotherDuck · **dbt** (`dbt-duckdb`) · Evidence.dev · GitHub Actions
+Python · DuckDB / MotherDuck · **dbt** (`dbt-duckdb`) · Evidence.dev · Tableau Public · GitHub Actions
